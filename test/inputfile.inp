@@ -41,7 +41,7 @@ charge_min = 2.
 charge_max = 6.
 
 iterations_elite = 1
-population = 50
+population = 2
 discard_ratio= 0.7
 mut_aa = ADEFHIKLMNQRSTVWY  # G C and P were removed
 

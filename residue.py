@@ -22,7 +22,7 @@ class Residue:
     def __str__(self):
         return self.letter
     
-    # set properties
+    # set properties ----
     def _compute_position(self):
         """
         Computes 3D position and returns
@@ -34,14 +34,26 @@ class Residue:
         sin = np.sin(angle)
         return np.array([cos, sin, height])
     
-    def set_rotated_position(self, reference=np.array([0., 0., 0.,])):
-        pass
+    def set_new_position(self, new_position):
+        self.position = new_position
     
-    # get information
+    # get information ----
     def get_hm_contribution(self):
         xy_plane_moment = self.hydrophobicity * self.position[:2]
         xyz_cont = np.array([xy_plane_moment[0], xy_plane_moment[1], 0.])
         return xyz_cont
+    
+    @property
+    def x(self):
+        return self.position[0]
+    
+    @property
+    def y(self):
+        return self.position[1]
+    
+    @property
+    def z(self):
+        return self.position[2]
 
 if __name__ == '__main__':
     pass

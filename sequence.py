@@ -16,7 +16,8 @@ class Sequence:
         self.fitness = []
         self.penalties = []
         # --- properties ---
-        self.hydrophobic_moment, self.hydrophobic_vector, self.raw_positions = self.compute_hydrophobic_moment()
+        self.hydrophobic_moment, self.hydrophobic_vector = self.compute_hydrophobic_moment()
+        self.align_hmoment()  # orient the sequence respect to vector of hydrophobicity
         self.charge = self.compute_charge()
         self.n_ter_charge = self.residues[0].charge
         self.c_ter_charge = self.residues[-1].charge
@@ -58,15 +59,31 @@ class Sequence:
         charges = [k.charge for k in self.residues]
         return sum(charges)
 
-    def compute_hydrophobic_moment(self, scale=None, theta=100):
+    def compute_hydrophobic_moment(self):
         # get contributions to hydrophobic vecotr
         h_vector = np.zeros(3)
         for res in self.residues:
             h_vector += res.get_hm_contribution()
-        h_scalar = np.linalg.norm(h_vector)
-        seq_positions = np.array([k.position for k in self.residues])
-        return h_scalar, h_vector, seq_positions
+        h_scalar = round(np.linalg.norm(h_vector), 3)
+        return h_scalar, h_vector
     
+    # geometry ---------------------------------------
+    def align_hmoment(self) -> None:
+        """
+        Align residue positions with respect to hydrophobic moment and 
+        center the z positions
+        """
+        # set hydrophobic vector as reference
+        h_vector = self.hydrophobic_vector / np.linalg.norm(self.hydrophobic_vector)  # normalization
+        z_centrum = np.array([k.position[2] for k  in self.residues])
+        z_centrum = np.mean(z_centrum)
+
+        for res in self.residues:
+            new_cos = res.x * h_vector[0] + res.y * h_vector[1]  # dot
+            new_sin = res.x * h_vector[1] - res.y * h_vector[0]  # cross
+            new_height = res.z - z_centrum
+            res.set_new_position(new_position=np.array([new_cos, new_sin, new_height]))
+
     # getting information ---------------------------
     def get_mean_fitness(self):
         # get fitness
@@ -89,45 +106,31 @@ class Sequence:
     def get_iterations(self):
         return len(self.fitness)
     
-    def get_faces(self, phi=180, three_dim=True):
+    def get_positions(self):
+        return np.array([k.position for k in self.residues])
+    
+    def get_faces(self, phi=180):
         """
-        Returns the requires face or both faces. It splits the sequence in the angle phi 
+        Returns both faces. It splits the sequence in the angle phi 
         respect to hydrobobic vector (phi/2 on each side of the vector).
-        returns lists of indexes and positions
+        returns lists of indexes 
         phi is called slice angle in instructor!!
         """
-        increment = 1  # only used if three_dim is True
         # transform into radians
         phi = phi * np.pi / 180
         # border in terms of cosine of phi/2
         border = np.cos(phi/2)
 
-        # set hydrophobic vector as reference
-        h_moment = self.hydrophobic_vector / np.linalg.norm(self.hydrophobic_vector)  # normalization
-        new_positions = []
-        
-        for n, pos in enumerate(self.raw_positions):
-            # ensure normal vectors
-            normal_pos = pos / np.linalg.norm(pos)
-            new_cos = normal_pos[0]*h_moment[0]+normal_pos[1]*h_moment[1]  # dot
-            new_sin = normal_pos[0]*h_moment[1]-normal_pos[1]*h_moment[0]  # cross
-            if three_dim:
-                new_positions.append([new_cos, new_sin, n*increment])
-            else:
-                new_positions.append([new_cos, new_sin])
-        new_positions = np.array(new_positions)
-
-        # split residues according to their cosine value
+        # split residues according to their x position
         # borders are on phi/2 (left and right)
         positive_face = []  # hydrophobic
         negative_face = []  # hydrophilic
-        for num, pos in enumerate(new_positions):
-            if pos[0] >= border:
-                positive_face.append(num)
+        for res in self.residues:
+            if res.x >= border:
+                positive_face.append(res.index)
             else:
-                negative_face.append(num)
-        
-        return positive_face, negative_face, new_positions
+                negative_face.append(res.index)
+        return positive_face, negative_face
     
     def get_charged_res(self, charge='positive', letters=False):
         """
@@ -144,12 +147,12 @@ class Sequence:
         else:
             logger.error('Sequence: get_charged_res: charge value not recognized')
             exit(3)
-        charged = []
-        for n, aa in enumerate(self.sequence):
-            if tester(self.aa_charges[aa]):
-                charged.append(n)
+        
+        charged = [k.index for k in self.residues if tester(k.charge)]
+
         if letters:
-            charged = [self.sequence[k] for k in charged]
+            charged = [k.letter for k in self.residues if tester(k.charge)]
+
         return charged
     
     # checker --------------------------------------
@@ -172,10 +175,27 @@ class Sequence:
             self.is_preferent = True
             logger.info(f'Sequence: {self.sequence} is preferent')
     
-    def check_resurrection(self):
+    def check_resurrection(self) -> None:
         self.is_resurrected = True
         self.resurrections += 1
         logger.info(f'Sequence: {self.sequence} is resurrected')
+
+    def check_consecutive_aa(self, max_rep) -> bool:
+        """
+        Check if there are repetition in consecutive residues.
+        Returns True is repetition is >= max_rep
+        """
+        if len(self.sequence) < max_rep:
+            return False
+        repetitions = 1
+        for i in range(1, len(self.sequence)):
+            if self.sequence[i] == self.sequence[i - 1]:
+                repetitions += 1
+                if repetitions >= max_rep:
+                    return True
+            else:
+                repetitions = 1
+        return False
 
 if __name__ == '__main__':
     pass

@@ -96,7 +96,7 @@ class Evolver:
         seq = str(seq)
         logger.debug(f'Evolver: checking validity of sequence {seq}')
 
-        # is not valid if the sequences already exists and avoid_repetition is True
+        # is not valid if the sequences already exists and avoid_reinsertion is True
         if self.sequence_exists(seq) and self.instructor.avoid_reinsertion:
             logger.debug('Evolver: sequence already exists --> discarding')
             return False
@@ -124,7 +124,8 @@ class Evolver:
         True if prohibited pattern is found
         """
         seq = str(seq)
-        return any(pat in seq for pat in self.prohibited_patterns)
+        patterns_clean = [k for k in self.prohibited_patterns if '*' not in k]
+        return any(pat in seq for pat in patterns_clean)
     
     def sequence_exists(self, seq) -> bool:
         """Check if a sequence string is already present in current or discarded sequences."""
@@ -139,7 +140,7 @@ class Evolver:
         """
         true_values = []
         test_seq = Sequence(seq)
-        _, _, positions = test_seq.get_faces()
+        positions = test_seq.get_positions()
 
         # Hydrophobic restrictions
         if self.instructor.hydrophobic_restriction:
@@ -335,8 +336,8 @@ class Evolver:
             if helix:
                 # swap based on proximity
                 logger.debug('Looking for closest residue')
-                _, _, positions = back_parent.get_faces()
-                _, _, new_positions = back_parent2.get_faces()
+                positions = back_parent.get_positions()
+                new_positions = back_parent2.get_positions()
                 old_fragment = positions[idx1:idx2]
                 new_fragment = []
                 for pos in old_fragment:
@@ -394,8 +395,9 @@ class Evolver:
         logger.debug('{} < parent2'.format(parent2))
 
         # get faces
-        pos_1, neg_1, positions_1 = parent1.get_faces(phi=self.instructor.face_slice_angle)
-        _, _, positions_2 = parent2.get_faces(phi=self.instructor.face_slice_angle)
+        pos_1, neg_1  = parent1.get_faces(phi=self.instructor.face_slice_angle)
+        positions_1 = parent1.get_positions()
+        positions_2 = parent2.get_positions()
 
         # -- choose base face ---
         if base_face == 'positive':
