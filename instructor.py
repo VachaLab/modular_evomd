@@ -33,6 +33,8 @@ class Instructor:
         self.sequences = []  # sequences that will be simulated 
         self.excluded_sequences = []  # forbidden sequences 
         self.prohibited_patterns = []  # forbidden patterns in a sequence: ex. KKK means "three K or more together"
+        # --- showing evolver ---
+        self.top_list = 10  # show 10 sequences
         # --- population ---
         self.mut_aa = 'ACDEFGHIKLMNPQRSTVWY'  # default = all natural amino acids
         self.peptide_len = 22  # length of peptides

@@ -1,31 +1,25 @@
 # === sequence.py ===
 import numpy as np
+from residue import Residue
 import logging
 
 logger = logging.getLogger(__name__)
 
 class Sequence:
     name = 'sequence'
-    aa_charges = {
-        'A': 0.0, 'N': 0.0, 'C': 0.0, 'Q': 0.0,
-        'G': 0.0, 'H': 0.0, 'I': 0.0, 'L': 0.0,
-        'M': 0.0, 'F': 0.0, 'P': 0.0, 'S': 0.0,
-        'T': 0.0, 'W': 0.0, 'Y': 0.0, 'V': 0.0,
-        'R': 1.0, 'K': 1.0,
-        'D': -1.0, 'E': -1.0,
-    }
 
     def __init__(self, seq, generation=0, h_scale='eisenberg') -> None:
         self.sequence = seq
-        self.generation = generation  # in which generation it was created
+        self.hydrophobic_scale = h_scale
+        self.residues = [Residue(k, n, self.hydrophobic_scale) for n, k in enumerate(self.sequence)]
+        self.generation = generation  # in which generation was created
         self.fitness = []
         self.penalties = []
         # --- properties ---
-        self.hydrophobic_scale = h_scale
         self.hydrophobic_moment, self.hydrophobic_vector, self.raw_positions = self.compute_hydrophobic_moment()
         self.charge = self.compute_charge()
-        self.n_ter_charge = self.aa_charges[self.sequence[0]]
-        self.c_ter_charge = self.aa_charges[self.sequence[-1]]
+        self.n_ter_charge = self.residues[0].charge
+        self.c_ter_charge = self.residues[-1].charge
         # --- boolean info ---
         self.is_elite = False
         self.is_preferent = False
@@ -61,59 +55,16 @@ class Sequence:
     
     # properties -----------------------------------
     def compute_charge(self):
-        charge = 0
-        for letter in self.sequence:
-            charge += self.aa_charges[letter]
-        return charge
+        charges = [k.charge for k in self.residues]
+        return sum(charges)
 
     def compute_hydrophobic_moment(self, scale=None, theta=100):
-        hydrophobicity_scales = {
-            'eisenberg': {
-                'A': 0.25, 'R': -1.76, 'N': -0.64, 'D': -0.72, 'C': 0.04, 'Q': -0.69,
-                'E': -0.62, 'G': 0.16, 'H': -0.4,  'I': 0.73, 'L': 0.53, 'K': -1.1,
-                'M': 0.26, 'F': 0.61, 'P': -0.07, 'S': -0.26, 'T': -0.18, 'W': 0.37,
-                'Y': 0.02, 'V': 0.54,
-            },
-            'kyte-doolittle': {
-                'A': 1.8,  'R': -4.5, 'N': -3.5, 'D': -3.5, 'C': 2.5,  'Q': -3.5,
-                'E': -3.5, 'G': -0.4, 'H': -3.2, 'I': 4.5,  'L': 3.8,  'K': -3.9,
-                'M': 1.9,  'F': 2.8,  'P': -1.6, 'S': -0.8, 'T': -0.7, 'W': -0.9,
-                'Y': -1.3, 'V': 4.2,
-            },
-            'wimley-white': {
-                'A': 0.17, 'R': 0.81, 'N': 0.42, 'D': 1.23, 'C': -0.24, 'Q': 0.58,
-                'E': 2.02, 'G': 0.01, 'H': 0.96, 'I': -0.31, 'L': -0.56, 'K': 0.99,
-                'M': -0.23, 'F': -1.13, 'P': 0.45, 'S': 0.13, 'T': 0.14, 'W': -1.85,
-                'Y': -0.94, 'V': 0.07,
-            },
-            'fauchere-pliska': {
-                'A': 0.31,  'R': -1.01, 'N': -0.60, 'D': -0.77, 'C': 1.54,  'Q': -0.22,
-                'E': -0.64, 'G': 0.00,  'H': 0.13,  'I': 1.80,  'L': 1.70,  'K': -0.99,
-                'M': 1.23,  'F': 1.79,  'P': 0.72,  'S': -0.04, 'T': 0.26,  'W': 2.25,
-                'Y': 0.96,  'V': 1.22,
-            },
-        }
-        # choose scale
-        if scale:
-            hydrophobicity = hydrophobicity_scales[scale]
-        else:
-            hydrophobicity = hydrophobicity_scales[self.hydrophobic_scale]
-        # compute hydrophobic vector
-        seq_positions = []
-        rad = np.deg2rad(theta)
-        x, y = 0.0, 0.0
-        # --- Vector sum for hydrophobic moment ---
-        for i, aa in enumerate(self.sequence):
-            h = hydrophobicity.get(aa, 0.0)
-            angle = i * rad
-            cos = np.cos(angle)
-            sin = np.sin(angle)
-            seq_positions.append([cos, sin])
-            x += h * cos
-            y += h * sin
-        seq_positions = np.array(seq_positions)
-        h_vector = np.array([x, y])
+        # get contributions to hydrophobic vecotr
+        h_vector = np.zeros(3)
+        for res in self.residues:
+            h_vector += res.get_hm_contribution()
         h_scalar = np.linalg.norm(h_vector)
+        seq_positions = np.array([k.position for k in self.residues])
         return h_scalar, h_vector, seq_positions
     
     # getting information ---------------------------
@@ -138,39 +89,6 @@ class Sequence:
     def get_iterations(self):
         return len(self.fitness)
     
-    def get_hface_indexes(self, positive=True, theta=100):
-        """
-        Returns a list of indexes and cross values with normal vector as reference
-        """
-        seq_positions = []
-        rad = np.deg2rad(theta)
-        # --- Vector sum for hydrophobic moment ---
-        for i, aa in enumerate(self.sequence):
-            angle = i * rad
-            cos = np.cos(angle)
-            sin = np.sin(angle)
-            seq_positions.append([cos, sin])
-        seq_positions = np.array(seq_positions)
-        h_moment = self.hydrophobic_vector / np.linalg.norm(self.hydrophobic_vector)
-        normal = np.array([-h_moment[1], h_moment[0]])
-        # select residues by side
-        pos_index = []
-        pos_cross = []
-        neg_index = []
-        neg_cross = []
-        for index, pos in enumerate(seq_positions):
-            cross = normal[0] * pos[1] - normal[1] * pos[0]
-            if cross > 0:
-                pos_cross.append(cross)
-                pos_index.append(index)
-            else:
-                neg_cross.append(cross)
-                neg_index.append(index)
-        if positive:
-            return pos_index ,pos_cross
-        else:
-            return neg_index, neg_cross
-        
     def get_faces(self, phi=180, three_dim=True):
         """
         Returns the requires face or both faces. It splits the sequence in the angle phi 

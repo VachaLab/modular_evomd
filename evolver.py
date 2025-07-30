@@ -55,10 +55,12 @@ class Evolver:
         lines.append(f"{'Parent sequences':<24}: {len(self.parent_sequences)}\n")
         lines.append(f"{'Discarded sequences':<24}: {len(self.discarded_sequences)}\n")
         lines.append(f"{'Total sequences':<24}: {total_sequences}\n")
-        lines.append(f"\n{'Top 10':<24}  {'Sequence':<{pep_len}} {'Fitness':<8} {'Hm':<8} {'Charge':<8}\n")
+        lines.append(f"\n{f'Top {self.instructor.top_list}':<24}  {'Sequence':<{pep_len}} {'Fitness':<8} {'Hm':<8} {'Charge':<8}\n")
         all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
         i = 0
-        while i < 10:
+        while i < self.instructor.top_list:
+            if len(all_sequences) < i+1:
+                break
             seq = all_sequences[i]
             fitness = seq.get_mean_fitness()
             fitness = f"{fitness:<8.4f}" if fitness is not None else f"{'-':<8}"
