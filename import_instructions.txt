@@ -1,0 +1,83 @@
+Libraries to be imported must comply with the following requirements:
+
+- Logging instead of print():
+Avoid using print() statements. Instead, implement logging as shown below:
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+logger.info('Calculator: Write here the information')
+
+Replace "Calculator" with the appropriate module name, such as "Penalty", "Analyzer", etc.
+
+
+- Mandatory Functions:
+Each script must define the following functions:
+
+def constructor_method(sequence) -> None:
+    """
+    receives a sequence and create simulation files
+    """
+    pass
+
+def calculator_method(sequence) -> None:
+    """
+    receives a sequence and run calculations.
+    """
+    pass
+
+def calculator_check(sequence) -> bool:
+    """
+    receives a sequence and returns True when the computation is ready
+    """
+    pass
+
+def analyzer_method(sequence) -> float:
+    """
+    receives a sequence and compute fitness function
+    returns the fitness function as float
+    """
+    pass
+
+def penalty_method(sequence) -> float:
+    """
+    receives a sequence and compute penalties
+    returns the penalty as a factor in range [0,1]
+    Penalty is used to compute mean fitness as follows:
+    (1 - penalty) * fitness: if penalty is 0, fitness is not modified.
+    """
+    pass
+
+
+Note: These function names are predefined in the Manager class. You can modify them if necessary in manager.py.
+
+- Script Execution Guard:
+At the end of each script, include:
+
+if __name__ == '__main__':
+    # write here the code that shouldn't be executed when imported
+    pass
+
+
+Organizational Guidelines:
+
+- Script organization is the responsibility of the user.
+- Following these guidelines will facilitate debugging and maintenance.
+
+Instruction File Configuration:
+In the instruction file, specify the corresponding script names (without the .py extension).
+Examples:
+
+penalty=script_penalty
+constructor = script_constructor
+calculator= script_calculator
+analyzer =script_analyzer
+
+If all required functions are located within a single script, 
+use the same script name across all fields.
+
+The apply_penalty option defaults to 'always', but it can be changed to 'once' 
+if the penalties are dependent solely on the structure, not on the trajectory.
+

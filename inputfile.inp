@@ -1,0 +1,23 @@
+optimize   = maximize
+populate_method=faces
+populate_weighted=False
+sequences = {
+    QKLSRAIAKGKDNLKEYKLNMS
+    QKMSRAIAKAADQAKEYKLNMS
+    QKMSRAIARLLDQAKEYRLNMS
+    AAAAAAAAAAAAAAAAAAAAAA
+} 
+excluded_sequences={}
+prohibited_patterns={KKKKK LLLLL IIIII}
+
+hydrophobic_restriction = True
+hydrophobic_threshold = 5.5
+iterations_elite = 3
+population = 32
+mut_aa = ACDEFHIKLMNQRSTVWY  # G and P were removed
+constructor = constructor # constructor method
+calculator = calculations # calculator method
+analyzer = free_energy # analyzer method
+
+sleep_time = 1800
+max_check_cycle = 120 # 60 hours
