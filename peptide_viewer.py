@@ -86,18 +86,25 @@ def plot_peptide(args: argparse, seq: Sequence, fig, ax):
 
     # plot peptide
     i = 0
+    visited = []
     for res in seq.residues:
+        df = 1
         if args.two_d:
-            ax.scatter(res.x, res.y, c=[res.color], s=80, alpha=1, zorder=3)
+            dis_mat = [False if np.linalg.norm(np.array([res.x, res.y])-k)>0.05 else True for k in visited]
+            if len(visited) > 0 and any(dis_mat):
+                df = 1.2
+            ax.scatter(res.x*df, res.y*df, c=[res.color], s=80, alpha=1, zorder=3)
+            visited.append(np.array([res.x, res.y]))
         else:
             ax.scatter(res.x, res.y, res.z, c=[res.color], s=80, alpha=0.8)
         if args.letters:
-            scale = 1.5
-            letter_pos = [res.x*scale, res.y*scale, res.z]
+            scale = 1.4
+            fontsize = 9
+            letter_pos = [res.x*scale*df, res.y*scale*df, res.z]
             if args.two_d:
-                ax.text(letter_pos[0], letter_pos[1], res.letter + f'{res.index + 1}')
+                ax.text(letter_pos[0], letter_pos[1], res.letter + f'{res.index + 1}', size=fontsize, ha='center', va='center')
             else:
-                ax.text(letter_pos[0], letter_pos[1], letter_pos[2], res.letter + f'{res.index + 1}')
+                ax.text(letter_pos[0], letter_pos[1], letter_pos[2], res.letter + f'{res.index + 1}', size=fontsize, ha='center', va='center')
         if i > 0:
             if args.two_d:
                 ax.plot([seq.residues[i-1].x, res.x], [seq.residues[i-1].y, res.y], c='gray', lw=1, zorder=1)
@@ -166,7 +173,7 @@ def set_legends(args: argparse, seq: Sequence, fig, ax):
         charge_lines = [Line2D([0], [0], marker='s', color=color, markerfacecolor=color, markersize=5, linewidth=0, label=f'{charge_type}') 
                         for charge_type, color in charge_colors.items()]
         # Add legend to the plot
-        ax.legend(handles=charge_lines, loc='upper left', title="Charge", frameon=False, facecolor='none', ncol=3)
+        ax.legend(handles=charge_lines, loc='upper center', title="Charge", frameon=False, facecolor='none', ncol=3)
     elif args.parameter == 'faces':
         # Create a legend
         charge_colors = {'Positive': seq.cmap(1.0), 'Negative': seq.cmap(0)}
@@ -174,7 +181,7 @@ def set_legends(args: argparse, seq: Sequence, fig, ax):
         charge_lines = [Line2D([0], [0], marker='s', color=color, markerfacecolor=color, markersize=5, linewidth=0, label=f'{charge_type}') 
                         for charge_type, color in charge_colors.items()]
         # Add legend to the plot
-        ax.legend(handles=charge_lines, loc='upper left', title="Faces", frameon=False, facecolor='none', ncol=2)
+        ax.legend(handles=charge_lines, loc='upper center', title="Faces", frameon=False, facecolor='none', ncol=2)
     else:
         print(f'Parameter {args.parameter} unrecognized')
         exit(1)
