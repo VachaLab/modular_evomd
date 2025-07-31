@@ -95,9 +95,9 @@ def plot_peptide(args: argparse, seq: Sequence, fig, ax):
             scale = 1.5
             letter_pos = [res.x*scale, res.y*scale, res.z]
             if args.two_d:
-                ax.text(letter_pos[0], letter_pos[1], res.letter)
+                ax.text(letter_pos[0], letter_pos[1], res.letter + f'{res.index + 1}')
             else:
-                ax.text(letter_pos[0], letter_pos[1], letter_pos[2], res.letter)
+                ax.text(letter_pos[0], letter_pos[1], letter_pos[2], res.letter + f'{res.index + 1}')
         if i > 0:
             if args.two_d:
                 ax.plot([seq.residues[i-1].x, res.x], [seq.residues[i-1].y, res.y], c='gray', lw=1, zorder=1)
@@ -144,8 +144,10 @@ def create_figure(args, seq):
         # get maximum Z value
         max_z = np.max(points[:,2])
         ax.set_zlim([-max_z, max_z])  # Z range
-    ax.set_xlim([-2, 2])  # X range
-    ax.set_ylim([-2, 2])  # Y range
+        ax.grid(False)
+    ax.set_axis_off()
+    ax.set_xlim([-2.5, 2.5])  # X range
+    ax.set_ylim([-2.5, 2.5])  # Y range
     ax.set_title(r'$\alpha$-Helix')
     return fig, ax
 
