@@ -61,7 +61,7 @@ def set_colors(args: argparse, seq: Sequence):
     if args.parameter == 'hydrophobicity':
         res_hp = np.array([k.hydrophobicity for k in seq.residues])  # hydrophobicity
     elif args.parameter == 'charge':
-        res_hp = np.array([k.charge for k in seq.residues])  # charges
+        res_hp = np.array([k.charge for k in seq.residues]+[1, -1])  # charges: always include 1 and -1
     elif args.parameter == 'faces':
         p_face, _ = seq.get_faces(phi=args.slice_angle)
         res_hp = np.array([1 if k.index in p_face else -1 for k in seq.residues])  # faces
