@@ -51,6 +51,11 @@ def get_arguments() -> argparse.Namespace:
         help='Name of the matplotlib colormap. Default=viridis',
         default='viridis', type=str
     )
+    parser.add_argument(
+        '-rb', '--remove-background',
+        help='Remove figure background',
+        action='store_true'
+    )
 
     args = parser.parse_args()
 
@@ -93,10 +98,10 @@ def plot_peptide(args: argparse, seq: Sequence, fig, ax):
             dis_mat = [False if np.linalg.norm(np.array([res.x, res.y])-k)>0.05 else True for k in visited]
             if len(visited) > 0 and any(dis_mat):
                 df = 1.2
-            ax.scatter(res.x*df, res.y*df, c=[res.color], s=80, alpha=1, zorder=3)
+            ax.scatter(res.x*df, res.y*df, c=[res.color], s=100, alpha=1, zorder=3)
             visited.append(np.array([res.x, res.y]))
         else:
-            ax.scatter(res.x, res.y, res.z, c=[res.color], s=80, alpha=0.8)
+            ax.scatter(res.x, res.y, res.z, c=[res.color], s=100, alpha=0.8)
         if args.letters:
             scale = 1.4
             fontsize = 9
@@ -151,11 +156,13 @@ def create_figure(args, seq):
         # get maximum Z value
         max_z = np.max(points[:,2])
         ax.set_zlim([-max_z, max_z])  # Z range
-        ax.grid(False)
-    ax.set_axis_off()
-    ax.set_xlim([-2.5, 2.5])  # X range
-    ax.set_ylim([-2.5, 2.5])  # Y range
+        if args.remove_background:
+            ax.grid(False)
+    ax.set_xlim([-2, 2])  # X range
+    ax.set_ylim([-2, 2])  # Y range
     ax.set_title(r'$\alpha$-Helix')
+    if args.remove_background:
+        ax.set_axis_off()
     return fig, ax
 
 def set_legends(args: argparse, seq: Sequence, fig, ax):
