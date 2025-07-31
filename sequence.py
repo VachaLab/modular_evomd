@@ -54,6 +54,9 @@ class Sequence:
     def __iter__(self):
         return iter(self.sequence)
     
+    def __getitem__(self, index):
+        return self.sequence[index]
+    
     # properties -----------------------------------
     def compute_charge(self):
         charges = [k.charge for k in self.residues]
