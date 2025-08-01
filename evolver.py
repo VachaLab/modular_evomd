@@ -493,7 +493,7 @@ class Evolver:
         if len(self.instructor.sequences) > 0:
             if len(self.instructor.sequences) > self.instructor.population:
                 logger.warning(f'Evolver: More that {self.instructor.population} found --> taking the first {self.instructor.population}')
-            for sq in self.instructor.sequences[:self.instructor.population + 1]:
+            for sq in self.instructor.sequences[:self.instructor.population]:
                 if len(sq) != self.instructor.peptide_len:
                     # skip if len does not match
                     logger.warning(f'Evolver: Length does not match "{sq}" (expected {self.instructor.peptide_len}) --> skipping')
