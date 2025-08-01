@@ -57,6 +57,32 @@ class Sequence:
     def __getitem__(self, index):
         return self.sequence[index]
     
+    def __add__(self, other):
+        if isinstance(other, str):
+            return str(self) + other
+        return NotImplemented
+
+    def __radd__(self, other):
+        if isinstance(other, str):
+            return other + str(self)
+        return NotImplemented
+    
+    def __eq__(self, other):
+        if isinstance(other, Sequence):
+            return self.sequence == other.sequence
+        elif isinstance(other, str):
+            return self.sequence == other
+        return NotImplemented
+    
+    def __repr__(self):
+        return self.sequence
+    
+    def __contains__(self, item):
+        return item in self.sequence
+    
+    def __reversed__(self):
+        return reversed(self.sequence)
+    
     # properties -----------------------------------
     def compute_charge(self):
         charges = [k.charge for k in self.residues]

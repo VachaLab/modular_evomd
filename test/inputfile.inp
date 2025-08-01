@@ -1,12 +1,12 @@
 optimize   = maximize
-populate_method=faces
+populate_method = mutations
 mixture_options={faces mutations swap }
 mixture_weights = { 6    3        1   } 
 populate_weighted=False
 extra_mutation = False
 also_mutate_probability = 0.4
 
-first_fill = faces
+first_fill = swap
 check_validity = False
 face_reference = negative
 face_slice_angle = 120

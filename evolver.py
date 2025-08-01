@@ -306,8 +306,6 @@ class Evolver:
         """destroy a section of a sequence and reconstruct it from parent2 or randomly if parent2=None"""
         logger.debug('---------SWAP--------')
         # Be sure to have a str
-        back_parent = parent1
-        parent1 = str(parent1)
         logger.debug(f'{parent1} < parent')
         
         # maximum size of the fragment
@@ -330,15 +328,12 @@ class Evolver:
         # how will sequence be reconstructed?
         if parent2:
             # from parents
-            back_parent2 = parent2
-            parent2 = str(parent2)
             new_fragment = parent2[idx1:idx2]
             if helix:
                 # swap based on proximity
                 logger.debug('Looking for closest residue')
-                positions = back_parent.get_positions()
-                new_positions = back_parent2.get_positions()
-                old_fragment = positions[idx1:idx2]
+                new_positions = parent2.get_positions()
+                old_fragment = [k.position for k in parent1.residues[idx1:idx2]]
                 new_fragment = []
                 for pos in old_fragment:
                     proximity = [np.linalg.norm(k-pos) for k in new_positions]
@@ -364,9 +359,6 @@ class Evolver:
     def hybridize_sequences(self, parent1, parent2) -> str:
         """Create a hybrid sequence giving priority to earlier and elite sequences."""
         logger.debug('---------HYBRIDS--------')
-        # be sure to have str
-        parent1 = str(parent1)
-        parent2 = str(parent2)
 
         # random crossover
         crossover = random.randint(1, self.instructor.peptide_len - 1)
@@ -381,15 +373,12 @@ class Evolver:
         # return hybrid
         return son_seq
 
-    def mix_faces(self, parent1, parent2, base_face='random') -> str:
+    def mix_faces(self, parent1, parent2) -> str:
         """
         Creates a sequence mixing the faces of two peptides. 
         'reference_face' is always the base face.
         Positive face is hydrophobic.
         """
-        # requires numpy
-        import numpy as np
-
         logger.debug('---------FACE MIX--------')
         logger.debug('{} < parent1'.format(parent1))
         logger.debug('{} < parent2'.format(parent2))
@@ -398,6 +387,7 @@ class Evolver:
         pos_1, neg_1  = parent1.get_faces(phi=self.instructor.face_slice_angle)
         positions_1 = parent1.get_positions()
         positions_2 = parent2.get_positions()
+        base_face = self.instructor.face_reference
 
         # -- choose base face ---
         if base_face == 'positive':
@@ -425,10 +415,10 @@ class Evolver:
         # 1. put all the aa from one_face and '-' in the other_face position
         new_sequence = [k if n in reference_face else '-' for n, k in enumerate(str(parent1))]
         logger.debug('{} < reference'.format(''.join(new_sequence)))
-        logger.debug(f'{len(other_face)} positions to reconstruct')
+        logger.debug(f'{len(other_face)} positions for reconstruction')
 
         # 2. fill in empty spaces with equivalent positions in parent2
-        # run on other face and positions_2
+        # run on other_face and positions_2
         included = ['-' for k in range(self.instructor.peptide_len)]
         positions_test = [k for k in positions_2]
         sequence_2 = [k for k in parent2]
@@ -447,7 +437,7 @@ class Evolver:
         for index, aa in enumerate(new_sequence):
             if aa == '-':
                 logger.debug(f'missing residue: including {str(parent1)[index]} in position {index}')
-                new_sequence[index] = str(parent1)[index]
+                new_sequence[index] = parent1[index]
             else:
                 continue
         
@@ -461,8 +451,6 @@ class Evolver:
         If seq=None, a sequence is selected from self.sequences
         """
         logger.debug('---------MUTATION--------')
-        # Be sure to have a str
-        parent = str(parent)
         logger.debug('{} < parent'.format(parent))
 
         # choose position to be mutated
@@ -683,7 +671,7 @@ class Evolver:
                 reverse=False, include_elite=True, exception=parent1,
                 include_discarded=self.instructor.include_discarded
                 )
-            candidate = self.mix_faces(parent1, parent2, base_face=self.instructor.face_reference)
+            candidate = self.mix_faces(parent1, parent2)
             if self.instructor.extra_mutation:
                 # it can be also mutated (check instructor.also_mutate_probability 
                 # and instructor.extra_mutation)
