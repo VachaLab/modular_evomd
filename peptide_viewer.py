@@ -56,6 +56,16 @@ def get_arguments() -> argparse.Namespace:
         help='Remove figure background',
         action='store_true'
     )
+    parser.add_argument(
+        '-sv', '--save',
+        help='Save the figure?',
+        action='store_true'
+    )
+    parser.add_argument(
+        '-o', '--out',
+        help='Name of the saved figure. Default=output.png',
+        default='output.png', type=str
+    )
 
     args = parser.parse_args()
 
@@ -210,6 +220,10 @@ def main():
 
     # set proper legends
     fig, ax = set_legends(args, seq, fig, ax)
+
+    # save the figure?
+    if args.save:
+        plt.savefig(args.out, dpi=300)
 
     plt.show()
 
