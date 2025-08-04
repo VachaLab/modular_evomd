@@ -18,13 +18,13 @@ swap_random_probability = 0.05
 
 # ------------------
 positive_preference = True
-positive_position = -0.5
+positive_position = -0.3
 positive_tolerance = 0.5
 positive_atleast = 0
 
 negative_preference = True
 negative_position = -1.
-negative_tolerance = 0.5
+negative_tolerance = 0.4
 negative_atleast = 1
 
 # ------------------
@@ -43,7 +43,7 @@ charge_min = 2.
 charge_max = 6.
 
 iterations_elite = 1
-population = 3
+population = 15
 discard_ratio= 0.7
 mut_aa = ADEFHIKLMNQRSTVWY  # G C and P were removed
 

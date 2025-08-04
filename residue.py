@@ -54,6 +54,10 @@ class Residue:
     @property
     def z(self):
         return self.position[2]
+    
+    @property
+    def xy(self):
+        return self.position[:2]
 
 if __name__ == '__main__':
     pass
