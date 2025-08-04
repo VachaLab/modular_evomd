@@ -148,18 +148,21 @@ class Evolver:
                 true_values.append(True)
             else:
                 true_values.append(False)
+
         # charge restrictions
         if self.instructor.charge_restriction:
             if not self.instructor.charge_min <= test_seq.charge <= self.instructor.charge_max:
                 true_values.append(True)
             else:
                 true_values.append(False)
+
         # charged extrema 
         if not self.instructor.charged_extrema:
             if test_seq.n_ter_charge + test_seq.c_ter_charge != 0:
                 true_values.append(True)
             else:
                 true_values.append(False)
+
         # positive residue position
         if self.instructor.positive_preference:
             charged_res = test_seq.get_charged_res(charge='positive')
@@ -185,6 +188,14 @@ class Evolver:
             check_this = [positions[k][0] for k in charged_res]
             logger.debug(f'{true_mat}  {check_this}')
             true_values.append(any(true_mat))
+
+        # "at least" restrictions
+        num_positive = len([k.letter for k in test_seq.residues if k.charge > 0])
+        num_negative = len([k.letter for k in test_seq.residues if k.charge < 0])
+        if num_positive < self.instructor.positive_atleast:
+            true_values.append(True)
+        if num_negative < self.instructor.negative_atleast:
+            true_values.append(True)
 
         del test_seq
         return any(true_values)

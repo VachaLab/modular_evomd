@@ -60,9 +60,12 @@ class Instructor:
         self.charge_max = +100.
         self.charged_extrema = False  # let N- and C- terminus be charged or not
 
+        self.positive_atleast = 0  # make valid only sequences with at least this number of positive residues
         self.positive_preference = False
         self.positive_position = 0.
         self.positive_tolerance = 0.26
+
+        self.negative_atleast = 0  # make valid only sequences with at least this number of negative residues
         self.negative_preference = False
         self.negative_position = -1.
         self.negative_tolerance = 0.26

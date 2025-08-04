@@ -1,0 +1,55 @@
+optimize   = maximize
+populate_method = random
+mixture_options={faces mutations swap }
+mixture_weights = { 6    3        1   } 
+populate_weighted=False
+extra_mutation = False
+also_mutate_probability = 0.4
+
+first_fill = random
+check_validity = False
+face_reference = negative
+face_slice_angle = 120
+
+maximum_swap_ratio = 0.5
+minimum_swap_ratio = 0.1
+swap_reconstruct = parent
+swap_random_probability = 0.05
+
+# ------------------
+positive_preference = True
+positive_position = -0.5
+positive_tolerance = 0.5
+positive_atleast = 0
+
+negative_preference = True
+negative_position = -1.
+negative_tolerance = 0.5
+negative_atleast = 1
+
+# ------------------
+
+prohibited_patterns={KKKK LLLL IIII AAAA RRRR EEEE}
+
+peptide_len = 22
+
+sequences = {
+}
+
+hydrophobic_restriction = True
+hydrophobic_threshold = 5.5
+charge_restriction = True
+charge_min = 2.
+charge_max = 6.
+
+iterations_elite = 1
+population = 3
+discard_ratio= 0.7
+mut_aa = ADEFHIKLMNQRSTVWY  # G C and P were removed
+
+constructor = constructor # constructor method
+calculator = calculations # calculator method
+analyzer = analyzer_umbrella # analyzer method
+
+sleep_time = 1800  # 30 min
+max_check_cycle = 200 # 100 hours = 4.2 days
