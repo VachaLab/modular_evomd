@@ -12,12 +12,83 @@ from typing import List, Union
 import os
 from utils import current_time
 import yaml
+from .fields import InstructionField, InstructionInRange, InstructionList
 
 logger = logging.getLogger(__name__)
 
 
 class Instructor:
     name = 'instructor'
+    # Write here the valid instructions with default values and default types
+    evomd_directory = InstructionField(str, 'simulation_data')
+    evolver_name = InstructionField(str, 'evolver')
+    optimize = InstructionField(str, 'maximize', choices={'maximize', 'minimize'})
+    sequences = InstructionField(list, [], subtype=str)
+    excluded_sequences = InstructionField(list, [], subtype=str)  # forbidden sequences 
+    prohibited_patterns = InstructionField(list, [], subtype=str)  # forbidden patterns in a sequence: ex. KKK means "three K or more together"
+    # --- showing evolver ---
+    top_list = InstructionField(int, 10)  # show 10 sequences
+    # --- population ---
+    mut_aa = InstructionField(str, 'ACDEFGHIKLMNPQRSTVWY')  # default = all natural amino acids
+    peptide_len = InstructionField(int, 22)  # length of peptides
+    population = InstructionField(int, 120)  # size of the population to be simulated
+    populate_method = InstructionField(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})
+    first_fill = InstructionField(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})  # first fill of Evolver.sequences
+    populate_weighted = InstructionField(bool, False)  # if true, better peptides have preference as parent
+    extra_mutation = InstructionField(bool, True)  # Additional mutation based on also_mutate_probability
+    also_mutate_probability = InstructionInRange(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
+    include_parents = InstructionField(bool, False)   # to include parents in next iteration
+    include_discarded = InstructionField(bool, False)  # include discarded sequences in choosing parents
+    include_resurrection = InstructionField(bool, False)  # test again a discarded sequence
+    avoid_reinsertion = InstructionField(bool, True)  # a previously tested sequence turns into restricted
+    resurrection_probability = InstructionField(float, 0.01)  # probability of resurrection instead of generate sequence
+    populate_discarded = InstructionField(bool, False)  # use discarded sequences to create new sequences
+    weight_bias = InstructionField(float, 0.3) # bias = (population - index) * weight_bias
+    # --- restrictions ---
+    hydrophobic_scale = InstructionField(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
+    hydrophobic_restriction = InstructionField(bool, True)  # 
+    hydrophobic_threshold = InstructionField(float, 5.5)  #
+    charge_restriction = InstructionField(bool, False)
+    charge_min = InstructionField(float, -100)
+    charge_max = InstructionField(float, +100)
+    charged_extrema = InstructionField(bool, False)  # let N- and C- terminus be charged or not
+
+    positive_atleast = InstructionField(int, 0)  # make valid only sequences with at least this number of positive residues
+    positive_preference = InstructionField(bool, False)
+    positive_position = InstructionInRange(float, 0., range=[-1, 1])
+    positive_tolerance = InstructionField(float, 0.26)
+
+    negative_atleast = InstructionField(int, 0)  # make valid only sequences with at least this number of negative residues
+    negative_preference = InstructionField(bool, False)
+    negative_position = InstructionInRange(float, -1., range=[-1, 1])
+    negative_tolerance = InstructionField(float, 0.26)
+
+    # --- for mixture method ---
+    mixture_options = InstructionField(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str)  # mixture of population methods. Default: all the available methods but random
+    mixture_weights = InstructionField(list, [1, 1, 1, 1], subtype=float)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
+    # --- for swap method ---
+    minimum_swap_ratio = InstructionInRange(float, 0.1, range=[0, 1])  # a minimum of 10 % of the sequence is swap.
+    maximum_swap_ratio = InstructionInRange(float, 0.3, range=[0, 1])  # a maximum of 30 % of the sequence is swap.
+    swap_reconstruct = InstructionField(str, 'random', choices={'parent', 'random' or 'choose'})  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
+    swap_random_probability = InstructionInRange(float, 0.1, range=[0, 1])  # 10% of random swap. Only works whith 'choose' 
+    # --- for faces method ---
+    face_slice_angle = InstructionInRange(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
+    face_reference = InstructionField(str, 'random', choices={'positive', 'negative', 'random'})  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
+    # --- ---
+    check_validity = InstructionField(bool, True)  # check first sequences
+    discard_ratio = InstructionField(float, 0.7)  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today
+    iterations_elite = InstructionField(int, 3)  # Iterations before setting elite
+    elite_ratio = InstructionField(float, 0.01)  # A maximum of 1% of the sequences can be elite
+    elite_bias = InstructionField(float, 2.0)  # if 1 --> no bias applied in choosing method. only if populate_weighted is True
+    # --- external methods ---
+    penalty = InstructionField(str, '')  # name of the penalty library
+    apply_penalty = InstructionField(str, 'always', choices={'once', 'always', 'never'})  # once = just apply once, always = apply in each iteration
+    constructor = InstructionField(str, '')  # name of the constructor library
+    calculator = InstructionField(str, '')  # contains calculator and checker
+    analyzer = InstructionField(str, '')
+    sleep_time = InstructionField(int, 3600)  # sleep time in seconds
+    max_check_cycle = InstructionField(int, 48)
+    ##############################
 
     def __init__(self, filename: str) -> None:
         """
@@ -26,8 +97,7 @@ class Instructor:
         :param filename: Name of the instruction file to read.
         """
         self.filename: str = filename
-        with open(self.filename, 'r') as f:
-            self.yaml_data = yaml.load(f, Loader=yaml.FullLoader)
+        self.yaml_data = self._load_yaml()
         ##############################
         # Write here the valid instructions with default values and default types
         self.evomd_directory = 'simulation_data'
@@ -103,6 +173,8 @@ class Instructor:
         self.__lines: List[str] = self._read_file()
         self._parse_instructions()
         self.cwd = os.getcwd()
+
+    # special methods ---------------------------
     
     def __str__(self) -> str:
         lines = ["===== INPUT  CONFIGURATION =====\n"]
@@ -116,6 +188,11 @@ class Instructor:
                 lines.append(f"{key:<24}: {value}\n")
         lines.append("================================\n")
         return ''.join(lines)
+    
+    # read yaml
+    def _load_yaml(self) -> dict:
+        with open(self.filename, 'r', encoding='utf-8') as f:
+            return yaml.load(f, Loader=yaml.FullLoader) or {}
 
     def _read_file(self) -> List[str]:
         """
