@@ -12,7 +12,7 @@ from typing import List, Union
 import os
 from utils import current_time
 import yaml
-from .fields import InstructionField, InstructionInRange, InstructionList
+from .fields import Instruction, InstructionInRange
 
 logger = logging.getLogger(__name__)
 
@@ -20,74 +20,74 @@ logger = logging.getLogger(__name__)
 class Instructor:
     name = 'instructor'
     # Write here the valid instructions with default values and default types
-    evomd_directory = InstructionField(str, 'simulation_data')
-    evolver_name = InstructionField(str, 'evolver')
-    optimize = InstructionField(str, 'maximize', choices={'maximize', 'minimize'})
-    sequences = InstructionField(list, [], subtype=str)
-    excluded_sequences = InstructionField(list, [], subtype=str)  # forbidden sequences 
-    prohibited_patterns = InstructionField(list, [], subtype=str)  # forbidden patterns in a sequence: ex. KKK means "three K or more together"
+    evomd_directory = Instruction(str, 'simulation_data')
+    evolver_name = Instruction(str, 'evolver')
+    optimize = Instruction(str, 'maximize', choices={'maximize', 'minimize'})
+    sequences = Instruction(list, [], subtype=str)
+    excluded_sequences = Instruction(list, [], subtype=str)  # forbidden sequences 
+    prohibited_patterns = Instruction(list, [], subtype=str)  # forbidden patterns in a sequence: ex. KKK means "three K or more together"
     # --- showing evolver ---
-    top_list = InstructionField(int, 10)  # show 10 sequences
+    top_list = Instruction(int, 10)  # show 10 sequences
     # --- population ---
-    mut_aa = InstructionField(str, 'ACDEFGHIKLMNPQRSTVWY')  # default = all natural amino acids
-    peptide_len = InstructionField(int, 22)  # length of peptides
-    population = InstructionField(int, 120)  # size of the population to be simulated
-    populate_method = InstructionField(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})
-    first_fill = InstructionField(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})  # first fill of Evolver.sequences
-    populate_weighted = InstructionField(bool, False)  # if true, better peptides have preference as parent
-    extra_mutation = InstructionField(bool, True)  # Additional mutation based on also_mutate_probability
+    mut_aa = Instruction(str, 'ACDEFGHIKLMNPQRSTVWY')  # default = all natural amino acids
+    peptide_len = Instruction(int, 22)  # length of peptides
+    population = Instruction(int, 120)  # size of the population to be simulated
+    populate_method = Instruction(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})
+    first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})  # first fill of Evolver.sequences
+    populate_weighted = Instruction(bool, False)  # if true, better peptides have preference as parent
+    extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
     also_mutate_probability = InstructionInRange(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
-    include_parents = InstructionField(bool, False)   # to include parents in next iteration
-    include_discarded = InstructionField(bool, False)  # include discarded sequences in choosing parents
-    include_resurrection = InstructionField(bool, False)  # test again a discarded sequence
-    avoid_reinsertion = InstructionField(bool, True)  # a previously tested sequence turns into restricted
-    resurrection_probability = InstructionField(float, 0.01)  # probability of resurrection instead of generate sequence
-    populate_discarded = InstructionField(bool, False)  # use discarded sequences to create new sequences
-    weight_bias = InstructionField(float, 0.3) # bias = (population - index) * weight_bias
+    include_parents = Instruction(bool, False)   # to include parents in next iteration
+    include_discarded = Instruction(bool, False)  # include discarded sequences in choosing parents
+    include_resurrection = Instruction(bool, False)  # test again a discarded sequence
+    avoid_reinsertion = Instruction(bool, True)  # a previously tested sequence turns into restricted
+    resurrection_probability = Instruction(float, 0.01)  # probability of resurrection instead of generate sequence
+    populate_discarded = Instruction(bool, False)  # use discarded sequences to create new sequences
+    weight_bias = Instruction(float, 0.3) # bias = (population - index) * weight_bias
     # --- restrictions ---
-    hydrophobic_scale = InstructionField(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
-    hydrophobic_restriction = InstructionField(bool, True)  # 
-    hydrophobic_threshold = InstructionField(float, 5.5)  #
-    charge_restriction = InstructionField(bool, False)
-    charge_min = InstructionField(float, -100)
-    charge_max = InstructionField(float, +100)
-    charged_extrema = InstructionField(bool, False)  # let N- and C- terminus be charged or not
+    hydrophobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
+    hydrophobic_restriction = Instruction(bool, True)  # 
+    hydrophobic_threshold = Instruction(float, 5.5)  #
+    charge_restriction = Instruction(bool, False)
+    charge_min = Instruction(float, -100)
+    charge_max = Instruction(float, +100)
+    charged_extrema = Instruction(bool, False)  # let N- and C- terminus be charged or not
 
-    positive_atleast = InstructionField(int, 0)  # make valid only sequences with at least this number of positive residues
-    positive_preference = InstructionField(bool, False)
+    positive_atleast = Instruction(int, 0)  # make valid only sequences with at least this number of positive residues
+    positive_preference = Instruction(bool, False)
     positive_position = InstructionInRange(float, 0., range=[-1, 1])
-    positive_tolerance = InstructionField(float, 0.26)
+    positive_tolerance = Instruction(float, 0.26)
 
-    negative_atleast = InstructionField(int, 0)  # make valid only sequences with at least this number of negative residues
-    negative_preference = InstructionField(bool, False)
+    negative_atleast = Instruction(int, 0)  # make valid only sequences with at least this number of negative residues
+    negative_preference = Instruction(bool, False)
     negative_position = InstructionInRange(float, -1., range=[-1, 1])
-    negative_tolerance = InstructionField(float, 0.26)
+    negative_tolerance = Instruction(float, 0.26)
 
     # --- for mixture method ---
-    mixture_options = InstructionField(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str)  # mixture of population methods. Default: all the available methods but random
-    mixture_weights = InstructionField(list, [1, 1, 1, 1], subtype=float)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
+    mixture_options = Instruction(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str)  # mixture of population methods. Default: all the available methods but random
+    mixture_weights = Instruction(list, [1, 1, 1, 1], subtype=float)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
     # --- for swap method ---
-    minimum_swap_ratio = InstructionInRange(float, 0.1, range=[0, 1])  # a minimum of 10 % of the sequence is swap.
-    maximum_swap_ratio = InstructionInRange(float, 0.3, range=[0, 1])  # a maximum of 30 % of the sequence is swap.
-    swap_reconstruct = InstructionField(str, 'random', choices={'parent', 'random' or 'choose'})  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
-    swap_random_probability = InstructionInRange(float, 0.1, range=[0, 1])  # 10% of random swap. Only works whith 'choose' 
+    minimum_swap_ratio = InstructionOdds(float, 0.1, range=[0, 1])  # a minimum of 10 % of the sequence is swap.
+    maximum_swap_ratio = InstructionOdds(float, 0.3, range=[0, 1])  # a maximum of 30 % of the sequence is swap.
+    swap_reconstruct = Instruction(str, 'random', choices={'parent', 'random' or 'choose'})  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
+    swap_random_probability = InstructionOdds(float, 0.1, range=[0, 1])  # 10% of random swap. Only works whith 'choose' 
     # --- for faces method ---
-    face_slice_angle = InstructionInRange(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
-    face_reference = InstructionField(str, 'random', choices={'positive', 'negative', 'random'})  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
+    face_slice_angle = InstructionOdds(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
+    face_reference = Instruction(str, 'random', choices={'positive', 'negative', 'random'})  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
     # --- ---
-    check_validity = InstructionField(bool, True)  # check first sequences
-    discard_ratio = InstructionField(float, 0.7)  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today
-    iterations_elite = InstructionField(int, 3)  # Iterations before setting elite
-    elite_ratio = InstructionField(float, 0.01)  # A maximum of 1% of the sequences can be elite
-    elite_bias = InstructionField(float, 2.0)  # if 1 --> no bias applied in choosing method. only if populate_weighted is True
+    check_validity = Instruction(bool, True)  # check first sequences
+    discard_ratio = Instruction(float, 0.7)  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today
+    iterations_elite = Instruction(int, 3)  # Iterations before setting elite
+    elite_ratio = Instruction(float, 0.01)  # A maximum of 1% of the sequences can be elite
+    elite_bias = Instruction(float, 2.0)  # if 1 --> no bias applied in choosing method. only if populate_weighted is True
     # --- external methods ---
-    penalty = InstructionField(str, '')  # name of the penalty library
-    apply_penalty = InstructionField(str, 'always', choices={'once', 'always', 'never'})  # once = just apply once, always = apply in each iteration
-    constructor = InstructionField(str, '')  # name of the constructor library
-    calculator = InstructionField(str, '')  # contains calculator and checker
-    analyzer = InstructionField(str, '')
-    sleep_time = InstructionField(int, 3600)  # sleep time in seconds
-    max_check_cycle = InstructionField(int, 48)
+    penalty = Instruction(str, '')  # name of the penalty library
+    apply_penalty = Instruction(str, 'always', choices={'once', 'always', 'never'})  # once = just apply once, always = apply in each iteration
+    constructor = Instruction(str, '')  # name of the constructor library
+    calculator = Instruction(str, '')  # contains calculator and checker
+    analyzer = Instruction(str, '')
+    sleep_time = Instruction(int, 3600)  # sleep time in seconds
+    max_check_cycle = Instruction(int, 48)
     ##############################
 
     def __init__(self, filename: str) -> None:
