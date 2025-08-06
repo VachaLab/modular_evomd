@@ -12,7 +12,7 @@ from typing import List, Union
 import os
 from utils import current_time
 import yaml
-from .fields import Instruction, InstructionInRange
+from .insturction_fields import Instruction, InstructionInRange
 
 logger = logging.getLogger(__name__)
 
