@@ -8,17 +8,18 @@ AH Tanguma
 """
 
 import logging
-from typing import List, Union
+from typing import Dict
 import os
 from utils import current_time
 import yaml
-from .insturction_fields import Instruction, InstructionInRange
+from insturction_fields import Instruction
 
 logger = logging.getLogger(__name__)
 
 
 class Instructor:
     name = 'instructor'
+    _schema: Dict[str, Instruction] = {}
     # Write here the valid instructions with default values and default types
     evomd_directory = Instruction(str, 'simulation_data')
     evolver_name = Instruction(str, 'evolver')
@@ -36,7 +37,7 @@ class Instructor:
     first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})  # first fill of Evolver.sequences
     populate_weighted = Instruction(bool, False)  # if true, better peptides have preference as parent
     extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
-    also_mutate_probability = InstructionInRange(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
+    also_mutate_probability = Instruction(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
     include_parents = Instruction(bool, False)   # to include parents in next iteration
     include_discarded = Instruction(bool, False)  # include discarded sequences in choosing parents
     include_resurrection = Instruction(bool, False)  # test again a discarded sequence
@@ -55,24 +56,24 @@ class Instructor:
 
     positive_atleast = Instruction(int, 0)  # make valid only sequences with at least this number of positive residues
     positive_preference = Instruction(bool, False)
-    positive_position = InstructionInRange(float, 0., range=[-1, 1])
+    positive_position = Instruction(float, 0., range=[-1, 1])
     positive_tolerance = Instruction(float, 0.26)
 
     negative_atleast = Instruction(int, 0)  # make valid only sequences with at least this number of negative residues
     negative_preference = Instruction(bool, False)
-    negative_position = InstructionInRange(float, -1., range=[-1, 1])
+    negative_position = Instruction(float, -1., range=[-1, 1])
     negative_tolerance = Instruction(float, 0.26)
 
     # --- for mixture method ---
-    mixture_options = Instruction(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str)  # mixture of population methods. Default: all the available methods but random
-    mixture_weights = Instruction(list, [1, 1, 1, 1], subtype=float)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
+    mixture_options = Instruction(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str, subchoices={'random', 'hybrids', 'mutations', 'swap', 'faces'})  # mixture of population methods. Default: all the available methods but random
+    mixture_weights = Instruction(list, [1, 1, 1, 1], subtype=int)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
     # --- for swap method ---
-    minimum_swap_ratio = InstructionOdds(float, 0.1, range=[0, 1])  # a minimum of 10 % of the sequence is swap.
-    maximum_swap_ratio = InstructionOdds(float, 0.3, range=[0, 1])  # a maximum of 30 % of the sequence is swap.
-    swap_reconstruct = Instruction(str, 'random', choices={'parent', 'random' or 'choose'})  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
-    swap_random_probability = InstructionOdds(float, 0.1, range=[0, 1])  # 10% of random swap. Only works whith 'choose' 
+    minimum_swap_ratio = Instruction(float, 0.1, range=[0, 1])  # a minimum of 10 % of the sequence is swap.
+    maximum_swap_ratio = Instruction(float, 0.3, range=[0, 1])  # a maximum of 30 % of the sequence is swap.
+    swap_reconstruct = Instruction(str, 'random', choices={'parent', 'random', 'choose'})  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
+    swap_random_probability = Instruction(float, 0.1, range=[0, 1])  # 10% of random swap. Only works whith 'choose' 
     # --- for faces method ---
-    face_slice_angle = InstructionOdds(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
+    face_slice_angle = Instruction(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
     face_reference = Instruction(str, 'random', choices={'positive', 'negative', 'random'})  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
     # --- ---
     check_validity = Instruction(bool, True)  # check first sequences
@@ -99,83 +100,22 @@ class Instructor:
         self.filename: str = filename
         self.yaml_data = self._load_yaml()
         ##############################
-        # Write here the valid instructions with default values and default types
-        self.evomd_directory = 'simulation_data'
-        self.evolver_name = 'evolver'
-        self.optimize = 'maximize'
-        self.sequences = []  # sequences that will be simulated 
-        self.excluded_sequences = []  # forbidden sequences 
-        self.prohibited_patterns = []  # forbidden patterns in a sequence: ex. KKK means "three K or more together"
-        # --- showing evolver ---
-        self.top_list = 10  # show 10 sequences
-        # --- population ---
-        self.mut_aa = 'ACDEFGHIKLMNPQRSTVWY'  # default = all natural amino acids
-        self.peptide_len = 22  # length of peptides
-        self.population = 120  # size of the population to be simulated
-        self.populate_method = 'mixture'  # mixture, hybrids, mutations, swap, faces
-        self.first_fill = 'random'  # first fill of Evolver.sequences
-        self.populate_weighted = False  # if true, better peptides have preference as parent
-        self.extra_mutation = True  # Additional mutation based on also_mutate_probability
-        self.also_mutate_probability = 0.2  # probability of mutating (only used if extra_mutation = true)
-        self.include_parents = False   # do not include parents in next iteration
-        self.include_discarded = False  # include discarded sequences in choosing parents
-        self.include_resurrection = False  # test again a discarded sequence
-        self.avoid_reinsertion = True  # a previously tested sequence is prohibited
-        self.resurrection_probability = 0.01  # probability of resurrection intead of generate sequence
-        self.populate_discarded = False  # use discarded sequences to create new sequences
-        self.weight_bias = 0.3 # bias = (population - index) * weight_bias
-        # --- restrictions ---
-        self.hydrophobic_scale = 'eisenberg'  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
-        self.hydrophobic_restriction = True  # 
-        self.hydrophobic_threshold = 5.5  #
-        self.charge_restriction = False
-        self.charge_min = -100.
-        self.charge_max = +100.
-        self.charged_extrema = False  # let N- and C- terminus be charged or not
-
-        self.positive_atleast = 0  # make valid only sequences with at least this number of positive residues
-        self.positive_preference = False
-        self.positive_position = 0.
-        self.positive_tolerance = 0.26
-
-        self.negative_atleast = 0  # make valid only sequences with at least this number of negative residues
-        self.negative_preference = False
-        self.negative_position = -1.
-        self.negative_tolerance = 0.26
-
-        # --- for mixture method ---
-        self.mixture_options = ['hybrids', 'faces', 'mutations', 'swap', ]  # mixture of population methods. Default: all the available methods but random
-        self.mixture_weights = [1, 1, 1, 1]  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed
-        # --- for swap method ---
-        self.maximum_swap_ratio = 0.3  # a maximum of 30 % of the sequence is swap.
-        self.minimum_swap_ratio = 0.1  # a minimum of 10 % of the sequence is swap.
-        self.swap_reconstruct = 'random'  # how to reconstruct the sequence? 'parent', 'random' or 'choose'
-        self.swap_random_probability = 0.1  # 10% of random swap. Only works whith 'choose' 
-        # --- for faces method ---
-        self.face_slice_angle = 180  # slice angle: half of the angle on each side of hydrophobic vector
-        self.face_reference = 'random'  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
-        # --- ---
-        self.check_validity = True  # check first sequences
-        self.discard_ratio = 0.7  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today
-        self.iterations_elite = 3  # Iterations before setting elite
-        self.elite_ratio = 0.01  # A maximum of 1% of the sequences can be elite
-        self.elite_bias = 2.0  # if 1 --> no bias applied in choosing method
-        # --- external methods ---
-        self.penalty = ''  # name of the penalty library
-        self.apply_penalty = 'always'  # once = just apply once, always = apply in each iteration
-        self.constructor = ''  # name of the constructor library
-        self.calculator = ''  # contains calculator and checker
-        self.analyzer = ''
-        self.sleep_time = 3600  # sleep time in seconds
-        self.max_check_cycle = 48
+        for name, field in self._schema.items():
+            raw = self.yaml_data.get(name, None)
+            if raw is None:
+                # not in yaml --> default value
+                setattr(self, name, field.default)
+                continue
+            try:
+                setattr(self, name, raw)
+            except TypeError as e:
+                logging.warning(f'Default value in {name}', e, field.default)
+                setattr(self, name, field.default)
         ##############################
-        self.__config_keys = list(self.__dict__)[1:]
-        self.__lines: List[str] = self._read_file()
-        self._parse_instructions()
+        self.__config_keys = list(self.__dict__)[2:]
         self.cwd = os.getcwd()
 
     # special methods ---------------------------
-    
     def __str__(self) -> str:
         lines = ["===== INPUT  CONFIGURATION =====\n"]
         for key in self.__config_keys:
@@ -189,215 +129,17 @@ class Instructor:
         lines.append("================================\n")
         return ''.join(lines)
     
+    def __iter__(self):
+        return iter(self.__config_keys)
+    
     # read yaml
     def _load_yaml(self) -> dict:
         with open(self.filename, 'r', encoding='utf-8') as f:
             return yaml.load(f, Loader=yaml.FullLoader) or {}
 
-    def _read_file(self) -> List[str]:
-        """
-        Reads the instruction file and filters out empty lines and comments.
-
-        :return: A list of valid (non-comment, non-empty) lines from the file.
-        """
-        if not self.filename:
-            return []
-        logger.info('Instructor: Reading instruction file')
-        pre_lines: List[str] = []
-        try:
-            with open(self.filename, 'r', encoding='utf-8') as file:
-                pre_lines = file.readlines()
-        except IOError as e:
-            logger.error(f"Instructor: Failed to read file '{self.filename}': {e}")
-            raise SystemExit(1)
-
-        lines: List[str] = []
-        for line in pre_lines:
-            # Remove inline comments and leading/trailing whitespace
-            no_comment = line.split('#')[0]
-            stripped_line = no_comment.strip()
-            if not stripped_line or stripped_line.startswith('#'):
-                continue
-            lines.append(stripped_line)
-        return lines
-
-    def _parse_instructions(self) -> None:
-        """
-        Parses the cleaned instruction lines and sets corresponding attributes.
-
-        Instructions are expected in the form of key-value pairs separated by '='.
-        Values can be:
-            - Single values (e.g., "start = yes")
-            - Blocks enclosed in curly braces with multiple values (e.g., "penalty={0 1 2}")
-            - Multi-line blocks enclosed within braces
-
-        Values are converted to int or float where applicable.
-        """
-        if not self.filename:
-            return 0
-        instructions = {}
-        i = 0
-
-        while i < len(self.__lines):
-            line = self.__lines[i]
-
-            if '=' not in line:
-                logger.warning(f'Instructor: line "{line}" does not contain any instruction --> skipping')
-                i += 1
-                continue
-
-            key, value = line.split('=', 1)
-            key = key.strip()
-            value = value.strip()
-
-            if key not in self.__dict__:
-                logger.warning(f'Instructor: "{key}" is not a valid instruction --> skipping')
-                i += 1
-                continue
-
-            if value.startswith('{'):
-                # Handle block value
-                if value.endswith('}'):
-                    # Single-line block
-                    block_content = value[1:-1].strip()
-                    tokens = block_content.split()
-                    instructions[key] = [self._convert_token(token) for token in tokens]
-                else:
-                    # Multi-line block
-                    block_tokens: List[str] = []
-                    initial_tokens = value[1:].strip()
-                    if initial_tokens:
-                        block_tokens.extend(initial_tokens.split())
-
-                    i += 1
-                    while i < len(self.__lines):
-                        current_line = self.__lines[i].strip()
-                        if '}' in current_line:
-                            tokens = current_line.split('}')[0].split()
-                            if tokens:
-                                block_tokens.extend(tokens)
-                            break
-                        block_tokens.extend(self.__lines[i].split())
-                        i += 1
-                    instructions[key] = [self._convert_token(token) for token in block_tokens]
-            else:
-                # Single token value
-                token = value.split()[0]
-                instructions[key] = self._convert_token(token)
-
-            i += 1
-
-        # Assign parsed values to instance attributes
-        for key, value in instructions.items():
-            #---------------
-            if key == 'optimize':
-                # verify that optimize is well defined
-                if not self._verify_value(key, value, expect_type=type(self.__dict__[key]), options=['maximize', 'minimize']):
-                    continue
-                value = value.lower()  # normalize casing
-            #---------------
-            if key == 'hydrophobic_scale':
-                if not self._verify_value(
-                    key, value, expect_type=type(self.__dict__[key]), 
-                    options=[
-                        'eisenberg', 
-                        'kyte-doolittle', 
-                        'wimley-white', 
-                        'fauchere-pliska',
-                        ]
-                    ):
-                    continue
-                value = value.lower()
-            #---------------
-            if key == 'populate_method' or key == 'first_fill':
-                # verify that populate_method is well defined
-                if not self._verify_value(
-                    key, value, expect_type=type(self.__dict__[key]), 
-                    options=[
-                        'mixture', 
-                        'hybrids',
-                        'mutations',  
-                        'swap',
-                        'random',
-                        'faces',
-                        ]
-                    ):
-                    continue
-                value = value.lower()  # normalize casing
-            #---------------
-            if key == 'swap_reconstruct':
-                # verify that populate_method is well defined
-                if not self._verify_value(
-                    key, value, expect_type=type(self.__dict__[key]), 
-                    options=[
-                        'random', 
-                        'parent',
-                        'choose'
-                        ]
-                    ):
-                    continue
-                value = value.lower()  # normalize casing
-            #---------------
-            if key == 'face_conserved':
-                # verify that populate_method is well defined
-                if not self._verify_value(
-                    key, value, expect_type=type(self.__dict__[key]), 
-                    options=[
-                        'random', 
-                        'positive',
-                        'negative'
-                        ]
-                    ):
-                    continue
-                value = value.lower()  # normalize casing
-            #---------------
-            if key == 'apply_penalty':
-                # verify that optimize is well defined
-                if not self._verify_value(key, value, expect_type=type(self.__dict__[key]), options=['always', 'once']):
-                    continue
-                value = value.lower()  # normalize casing
-            #---------------
-            if not self._verify_value(key, value, expect_type=type(self.__dict__[key])):
-                continue
-            setattr(self, key, value)
-    
-    def _verify_value(self, key, value, expect_type=None, options=None) -> bool:
-        """
-        Receives key and value and Verifies type and options
-        """
-        if not isinstance(value, expect_type):
-            logger.warning(
-                    f'Instructor: "{key}" is "{type(value).__name__}" but must be '
-                    f'"{type(self.__dict__[key]).__name__}" --> using default ({self.__dict__[key]})'
-                )
-            return False
-        if options and value.lower() not in options:
-            logger.warning(f'Instructor: "{value}" is not a valid option for "optimize" --> using default ({self.__dict__[key]})')
-            return False
-        return True
-
-    def _convert_token(self, token: str) -> Union[int, float, bool, str]:
-        """
-        Attempt to convert a token to an int, float, or bool. If conversion fails, return the original string.
-
-        :param token: A string token from the instruction file.
-        :return: Converted token as int, float, bool, or original string.
-        """
-        lowered = token.lower()
-        if lowered == 'true':
-            return True
-        if lowered == 'false':
-            return False
-        try:
-            if '.' in token:
-                return float(token)
-            return int(token)
-        except ValueError:
-            return token
-
     def interactive_change_method(self, generation: int):
         """
-        Interactive CLI editor for key optimization parameters in Instructor.
+        Interactive editor for key optimization parameters in Instructor.
         Records all changes to 'evo-md_changes.log' with timestamp and generation.
         
         Args:

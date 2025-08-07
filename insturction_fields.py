@@ -1,7 +1,7 @@
 # === fields.py ===
 import logging
 from typing import Any, Type, Optional, Sequence, Dict, List
-from .instruction_validators import *
+from instruction_validators import *
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +23,19 @@ class Instruction:
         # --- optional
         self.subtype = subtype
         self.choices = choices
+        self.subchoices = subchoices
         self.range = range
 
-        self.validators: List[Validator] = [TypeValidator(type_)]
+        self.validators: List[Validator] = [TypeValidator(self.type_)]
+
         if self.subtype:
-            self.validators.append(TypeValidator(subtype))
-        if choices:
-            self.validators.append(ChoicesValidator(choices))
-        if range:
-            self.validators.append(RangeValidator(range[0], range[1]))
+            self.validators.append(SubtypeValidator(self.subtype))
+        if self.choices:
+            self.validators.append(ChoiceValidator(self.choices))
+        if self.subchoices:
+            self.validators.append(SubchoiceValidator(self.subchoices))
+        if self.range:
+            self.validators.append(RangeValidator(self.range[0], self.range[1]))
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -40,7 +44,7 @@ class Instruction:
 
     def __get__(self, instance, owner):
         if instance is None:
-            return self  # introspeccion?
+            return self  # Was ist Introspektion?
         return instance.__dict__.get(self.name, self.default)
 
     def __set__(self, instance, value):

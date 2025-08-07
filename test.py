@@ -1,18 +1,14 @@
 # === test.py ===
 
-# from instructor_modular import Instructor
-
-# file_name = 'inputfile.yaml'
-# instructor = Instructor(filename=file_name)
-# print(instructor.yaml_data)
-
-
+from instructor_modular import Instructor
 from instruction_validators import *
-
+from insturction_fields import Instruction
 
 if __name__ == '__main__':
-    # val = SubtypeValidator(str)
-    # val = TypeValidator(list)
-    val = SubchoicesValidator(['hola', 'amigo'])
-    print(val)
-    print(val.validate(['hola', 'amigo']))
+    file_name = 'inputfile.yaml'
+    instructor = Instructor(filename=file_name)
+    print('------------')
+    print(instructor)
+    print('------------')
+    print([k for k in instructor])
+

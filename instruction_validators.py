@@ -15,13 +15,22 @@ class Validator:
         raise NotImplementedError
     
     def adjust_numbers(self, type_, value) -> Any:
+        """
+        If value is a number, the method transforms value into the 
+        adequate type of number (float or int). otherwise, it returns
+        the original value.
+        """
         if isinstance(value, numbers.Number):
             return type_(value)
         else:
             return value
 
 class TypeValidator(Validator):
-    def __init__(self, type_: type):
+    """
+    Validates type.
+    If value is a number, it is always transformed into the adequate type.
+    """
+    def __init__(self, type_: type) -> None:
         self.type_ = type_
 
     def validate(self, value: Any) -> bool:
@@ -36,20 +45,20 @@ class SubtypeValidator(TypeValidator):
     def validate(self, value: Any) -> bool:
         return super().validate(value)
 
-class ChoicesValidator(Validator):
-    def __init__(self, choices: Sequence[Any]):
+class ChoiceValidator(Validator):
+    def __init__(self, choices: Sequence[Any]) -> None:
         self.choices = choices
 
     def validate(self, value: Any) -> bool:
         return value in self.choices
 
-class SubchoicesValidator(ChoicesValidator):
+class SubchoiceValidator(ChoiceValidator):
     @validate_list
     def validate(self, value: Any) -> bool:
         return super().validate(value)
 
 class RangeValidator(Validator):
-    def __init__(self, min_: Any, max_: Any):
+    def __init__(self, min_: Any, max_: Any) -> None:
         self.min = min_
         self.max = max_
 
