@@ -4,7 +4,7 @@ import argparse
 
 def get_arguments() -> argparse.Namespace:
     """
-    Parse and return command-line arguments for the Evo-MD-FE-DB agent.
+    Reads command-line arguments and parses to an argparse object.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
@@ -14,13 +14,13 @@ def get_arguments() -> argparse.Namespace:
     # Input file with sequences and additional options
     parser.add_argument(
         '-f', '--file',
-        help='Input file containing sequences and configuration options.'
+        help='YAML file containing instructions.'
     )
 
     # Binary input file 
     parser.add_argument(
         '-evopkl', '--evopkl',
-        help='Binary evolutionary file.'
+        help='Binary evolutionary file previously created. Needed if the pkl file name is not evolver.pkl'
     )
 
     # Show default configuration in Instructor
@@ -48,7 +48,7 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         '-rs', '--report-sequences',
         action='store_true',
-        help='Display all sequences with information and exit.'
+        help='Report sequences in a CSV file.'
     )
 
     # just create evolver
@@ -68,7 +68,7 @@ def get_arguments() -> argparse.Namespace:
     # Agent actions
     parser.add_argument(
         '-start', '--start',
-        help='Start the EvoMD-DB agent.',
+        help='Start the evo-md process.',
         action='store_true'
     )
     
@@ -80,20 +80,20 @@ def get_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-    '-cm', '--change-method',
-    action='store_true',
-    help='Interactively change optimization method parameters.'
+        '-cm', '--change-method',
+        action='store_true',
+        help='Interactively change optimization method parameters.'
     )
 
     parser.add_argument(
-    '-pp', '--populate-previous',
-    action='store_true',
-    help='Populate using information from previous simulations in the simulation directory.'
+        '-pp', '--populate-previous',
+        action='store_true',
+        help='Populate using information from previous simulations in the simulation directory.'
     )
 
     parser.add_argument(
-    '-in', '--insert-sequence',
-    help='Insert a sequence and exit.'
+        '-in', '--insert-sequence',
+        help='Insert a sequence and exit.'
     )
 
     parser.add_argument(

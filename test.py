@@ -1,6 +1,6 @@
 # === test.py ===
 
-from instructor_modular import Instructor
+from instructor import Instructor
 from instruction_validators import *
 from insturction_fields import Instruction
 
@@ -10,5 +10,5 @@ if __name__ == '__main__':
     print('------------')
     print(instructor)
     print('------------')
-    print([k for k in instructor])
+    print([k for k in instructor.prohibited_patterns])
 

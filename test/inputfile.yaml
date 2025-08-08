@@ -37,6 +37,7 @@ prohibited_patterns:
   AAAA,
   RRRR,
   EEEE,
+  '([A-Z])\1{2,}',
   ]
 peptide_len: 22
 sequences: 
@@ -79,7 +80,7 @@ charge_restriction: True
 charge_min: 2.
 charge_max: 6.
 iterations_elite: 1
-population: 15
+population: 150
 discard_ratio: 0.7
 mut_aa: ADEFHIKLMNQRSTVWY  # G C and P were removed
 constructor: constructor # constructor method

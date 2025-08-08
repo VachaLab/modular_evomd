@@ -122,6 +122,8 @@ class Evolver:
     def has_prohibited_pattern(self, seq) -> bool:
         """
         True if prohibited pattern is found
+        Include regular expressions with re r'([A-Z])\1{2,}' for looking for the 
+        same letter more that 3 times.
         """
         seq = str(seq)
         patterns_clean = [k for k in self.prohibited_patterns if '*' not in k]
