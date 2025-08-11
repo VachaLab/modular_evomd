@@ -12,7 +12,7 @@ from typing import Dict
 import os
 from utils import current_time
 import yaml
-from insturction_fields import Instruction
+from instruction_fields import Instruction
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ class Instructor:
     mut_aa = Instruction(str, 'ACDEFGHIKLMNPQRSTVWY')  # default = all natural amino acids
     peptide_len = Instruction(int, 22)  # length of peptides
     population = Instruction(int, 120)  # size of the population to be simulated
-    populate_method = Instruction(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})
-    first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces'})  # first fill of Evolver.sequences
+    populate_method = Instruction(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random'})
+    first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random'})  # first fill of Evolver.sequences
     populate_weighted = Instruction(bool, False)  # if true, better peptides have preference as parent
     extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
     also_mutate_probability = Instruction(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)

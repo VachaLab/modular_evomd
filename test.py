@@ -2,13 +2,10 @@
 
 from instructor import Instructor
 from instruction_validators import *
-from insturction_fields import Instruction
+from sequence import Sequence
 
 if __name__ == '__main__':
-    file_name = 'inputfile.yaml'
-    instructor = Instructor(filename=file_name)
-    print('------------')
-    print(instructor)
-    print('------------')
-    print([k for k in instructor.prohibited_patterns])
+    seq = 'AAYNMIVNWLQKLRMIFMIFLHILS'
+    seq = Sequence(seq)
+    print(seq.sequence)
 

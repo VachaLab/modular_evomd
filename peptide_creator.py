@@ -43,7 +43,6 @@ def main():
     Execute the evo-md according to the arguments in parser.
     """
 
-    logger = logging.getLogger(__name__)
     args = get_arguments()
 
     # Create evolver and read first sequences
@@ -67,7 +66,7 @@ def main():
 
     # report
     print(f'{len(evo.sequences)} sequences generated from {back_len_parents} previously given')
-    print('Showng sequences')
+    print('Showing sequences')
     for seq in evo.sequences:
         print(seq)
     exit(0)

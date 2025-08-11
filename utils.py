@@ -11,6 +11,10 @@ import importlib.util
 import json
 
 
+class ResidueError(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+        
 class TimeCount:
     """
     A simple timer class to track the elapsed time from initialization or from the last reset.

@@ -2,17 +2,53 @@
 import numpy as np
 from residue import Residue
 import logging
+from scales import Scales
+from typing import Sequence, Dict
+from instruction_fields import Instruction
+from utils import ResidueError
+
 
 logger = logging.getLogger(__name__)
 
+
+class SequenceField(Instruction):
+    def __init__(self):
+        super().__init__(list, None, subchoices=list(Scales.aa_charges))
+    
+    def __set__(self, instance, value):
+        value_list = list(value)
+        for validator in self.validators:
+            if not validator.validate(value_list):
+                raise ResidueError(f'Unrecognized residue in the sequence: {value}')
+        instance.__dict__[self.name] = value
+
+
 class Sequence:
-    name = 'sequence'
+    _schema: Dict[str, Instruction] = {}
+
+    name = 'Sequence'
+    sequence = SequenceField()
+    generation = Instruction(int, 0)
+    hydrophobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})
 
     def __init__(self, seq, generation=0, h_scale='eisenberg') -> None:
-        self.sequence = seq
-        self.hydrophobic_scale = h_scale
+        # --- attributes as Instruction ---
+        try:
+            setattr(self, 'sequence', seq)
+        except ResidueError as e:
+            logging.error(f'Check the sequence: {e}')
+            exit(3)
+        try:
+            setattr(self, 'generation', generation)
+        except:
+            setattr(self, 'generation', self._schema['generation'].default)
+        try:
+            setattr(self, 'hydrophobic_scale', h_scale)
+        except:
+            setattr(self, 'hydrophobic_scale', self._schema['hydrophobic_scale'].default)
+
+        # --- attributes from previous values ---
         self.residues = [Residue(k, n, self.hydrophobic_scale) for n, k in enumerate(self.sequence)]
-        self.generation = generation  # in which generation was created
         self.fitness = []
         self.penalties = []
         # --- properties ---
