@@ -62,7 +62,7 @@ def main():
         sequences = yaml_data['sequences']
 
     sequences = SequenceArray(sequences=[Sequence(k) for k in sequences])
-    print(sequences)
+    print(sequences[0].randomize())
 
 
 if __name__ == '__main__':

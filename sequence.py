@@ -6,6 +6,7 @@ from scales import Scales
 from typing import Sequence, Dict
 from instruction_fields import Instruction
 from utils import ResidueError
+import random
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,10 @@ class SequenceField(Instruction):
                 raise ResidueError(f'Unrecognized residue in the sequence: {value}')
         instance.__dict__[self.name] = value
 
+class ScaleField(Instruction):
+    def __init__(self):
+        super().__init__(str, 'eisenberg', choices=list(Scales.hydrophobicity_scales))
+
 
 class Sequence:
     _schema: Dict[str, Instruction] = {}
@@ -29,7 +34,7 @@ class Sequence:
     name = 'Sequence'
     sequence = SequenceField()
     generation = Instruction(int, 0)
-    hydrophobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})
+    hydrophobic_scale = ScaleField()
 
     def __init__(self, seq, generation=0, h_scale='eisenberg') -> None:
         # --- attributes as Instruction ---
@@ -103,6 +108,9 @@ class Sequence:
             return other + str(self)
         return NotImplemented
     
+    def __hash__(self):
+        return hash(tuple(self.sequence))
+    
     def __eq__(self, other):
         if isinstance(other, Sequence):
             return self.sequence == other.sequence
@@ -118,7 +126,13 @@ class Sequence:
     
     def __reversed__(self):
         return reversed(self.sequence)
-    
+
+    # sequence modification ------------------------
+    def randomize(self):
+        as_list = list(self.sequence)
+        random.shuffle(as_list)
+        return ''.join(as_list)
+
     # properties -----------------------------------
     def compute_charge(self):
         charges = [k.charge for k in self.residues]

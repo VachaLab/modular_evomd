@@ -60,6 +60,9 @@ class SequenceArray(MutableSequence):
     def __str__(self):
         return f'{self._sequences}'
     
+    def __iter__(self):
+        return iter(self._sequences)
+    
     def __getitem__(self, index):
         return self._sequences[index]
     
