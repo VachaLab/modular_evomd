@@ -1,4 +1,4 @@
-# === peptide_creator.py ===
+# === peptide_generator.py ===
 #--------------------------------------------
 # Global logging configuration
 import logging
@@ -60,7 +60,8 @@ def main():
     evo.parent_sequences = [k for k in evo.sequences]
     back_len_parents = len(evo.parent_sequences)
     evo.sequences = []
-
+    print(evo.instructor)
+    
     # populate sequences
     evo.populate()
 

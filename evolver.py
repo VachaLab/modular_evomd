@@ -144,9 +144,16 @@ class Evolver:
         test_seq = Sequence(seq)
         positions = test_seq.get_positions()
 
-        # Hydrophobic restrictions
+        # Hydrophobic moment restrictions
         if self.instructor.hydrophobic_restriction:
             if test_seq.hydrophobic_moment < self.instructor.hydrophobic_threshold:
+                true_values.append(True)
+            else:
+                true_values.append(False)
+        
+        # Hydrophobic index restrictions
+        if self.instructor.hindex_restriction:
+            if test_seq.hydrophobic_index > self.instructor.hindex_threshold:
                 true_values.append(True)
             else:
                 true_values.append(False)

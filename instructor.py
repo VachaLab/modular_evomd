@@ -49,6 +49,10 @@ class Instructor:
     hydrophobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
     hydrophobic_restriction = Instruction(bool, True)  # 
     hydrophobic_threshold = Instruction(float, 5.5)  #
+
+    hindex_restriction = Instruction(bool, False)  # 
+    hindex_threshold = Instruction(float, -7.0)  #
+
     charge_restriction = Instruction(bool, False)
     charge_min = Instruction(float, -100)
     charge_max = Instruction(float, +100)

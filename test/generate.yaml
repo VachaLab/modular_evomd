@@ -1,7 +1,7 @@
 check_validity: False
 
 # ------------------
-populate_method: faces
+populate_method: random
 extra_mutation: False
 also_mutate_probability: 0.4
 # ------------------
@@ -17,13 +17,22 @@ swap_reconstruct: parent
 swap_random_probability: 0.1
 # ------------------
 positive_preference: False
-positive_atleast: 0
+positive_atleast: 3
 positive_position: 0.
 positive_tolerance: 0.5
-negative_preference: False
-negative_atleast: 0
+negative_preference: True
+negative_atleast: 1
 negative_position: -1.
 negative_tolerance: 0.5
+# ------------------
+hydrophobic_restriction: True
+hydrophobic_threshold: 5.5
+hindex_restriction: True
+hindex_threshold: -7.0
+charged_extrema: True
+charge_restriction: True
+charge_min: 2.
+charge_max: 6.
 # ------------------
 prohibited_patterns: 
   [
@@ -33,47 +42,13 @@ prohibited_patterns:
   AAAA,
   RRRR,
   EEEE,
+  GG,
   '([A-Z])\1{2,}',
   ]
 sequences: 
   [
-  VFMFIDSAFHKFKWIFQRFRHN,
-  THSVNQSFANFHNRVKHLWSNM,
-  NIKQWQQNMVQRLRSTFQHFTQ,
-  SKLKTFLEQMKNKLNQAHEVWM,
-  NWFFTRFRHFANNVMYMMATIW,
-  IQMFRMAYMRIQQTYQTWQERV,
-  MRNFAWKVIQKSYNLAQILQTF,
-  NVKSTLQRMKNQIEDIRHRTRN,
-  ATTWRELIQRMRDWMWWFHHRI,
-  NQTIFMLIQKYRNIWHYFFHLV,
-  NRFRQMVNIVMEAMSQATHKSW,
-  AYQVKQFMNKINYIITMMVNTA,
-  AMHKIHYVFQKIRHALNHFTWL,
-  QFWVQKVKQLMFSMHNLIAQFF,
-  MQRVSSASSYFQNWINVIYNKW,
-  TRYRELVYRIRQRLQNVTDIHN,
-  NMLYQKWHSVKNASQDLFHRVS,
-  YLVHKIYNFVQVFRHNISIMYN,
-  ISKVQWQMYQFLTVFRNFFTAI,
-  LVTSAFDRVKQKIAYIFELIKI,
-  WAKLHDWLQNWAHNMRVFWTKI,
-  LSKLKQWITSLNQLISSISVVL,
-  AKLHSVVWRFKNILTHAKDIIQ,
-  IVHYLHTLQNRWKQLFANWVNL,
-  YNMIVNWLQKLRMIFMIFLHIL,
-  FQKLAQIYQQVYQKWRWAFESY,
-  NNAFNRYMTHVNYVWAFSRNFI,
-  YKFADFWQISHQWLRNTVQRMA,
-  YMREFVQRFNTLFSHLQHKFVN,
-  SIRNFWNRVANFLFILYSNSNN,
-  IRVLNLFHNINNNYRNFASFWW,
-  TNNQQALHQMRNNYNRLNNIVQ,
+
   ]
 peptide_len: 22
-hydrophobic_threshold: 5.5
-charge_restriction: True
-charge_min: 2.
-charge_max: 6.
 population: 32
-mut_aa: ADEFHIKLMNQRSTVWY  # G C and P were removed
+mut_aa: ADEFGHIKLMNQRSTVWY  # C and P were removed
