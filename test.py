@@ -1,19 +1,21 @@
 # === test.py ===
 
 from sequence import Sequence
+from sequencearray import SequenceArray
 
 if __name__ == '__main__':
-    seq = 'LHFKEKYAHGMALASRKNLSKI'
-    seq = Sequence(seq)
-    
-    print(seq.hydrophobic_index, seq.hydrophobic_moment)
+    sequences = [
+        'R'*11 + 'I'*11,
+        'LMKRMLMQQKRLGRQQHKAIET',
+        'LHFKEKYAHGMALASRKNLSKI',
+        'LKKYKEHARAGLHIANFLSKMS',
+        'QKLSRAIAKGKDNLKEYKLNMS',
+    ]
 
-    seq = 'LKKYKEHARAGLHIANFLSKMS'
-    seq = Sequence(seq)
+    sarray = SequenceArray(sequences=[Sequence(k) for k in sequences])
     
-    print(seq.hydrophobic_index, seq.hydrophobic_moment)
-
-    seq = 'QKLSRAIAKGKDNLKEYKLNMS'
-    seq = Sequence(seq)
+    for seq in sarray:
+        print(seq, '---')
+        print(seq.charge, seq.hydrophobic_moment, seq.hydrophobic_index, seq.hdistribution)
+        print('---')
     
-    print(seq.hydrophobic_index, seq.hydrophobic_moment)

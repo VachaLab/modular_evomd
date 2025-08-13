@@ -157,6 +157,13 @@ class Evolver:
                 true_values.append(True)
             else:
                 true_values.append(False)
+        
+        # Hydrophobic distribution restrictions
+        if self.instructor.hdistribution_restriction:
+            if test_seq.hdistribution > self.instructor.hdistribution_threshold:
+                true_values.append(True)
+            else:
+                true_values.append(False)
 
         # charge restrictions
         if self.instructor.charge_restriction:

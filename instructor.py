@@ -53,6 +53,9 @@ class Instructor:
     hindex_restriction = Instruction(bool, False)  # 
     hindex_threshold = Instruction(float, -7.0)  #
 
+    hdistribution_restriction = Instruction(bool, False)
+    hdistribution_threshold = Instruction(float, 2.)
+
     charge_restriction = Instruction(bool, False)
     charge_min = Instruction(float, -100)
     charge_max = Instruction(float, +100)
@@ -127,9 +130,9 @@ class Instructor:
 
             # Formatear listas de forma especial
             if isinstance(value, list):
-                lines.append(f"{key:<24}: {len(value)}\n")
+                lines.append(f"{key:<26}: {len(value)}\n")
             else:
-                lines.append(f"{key:<24}: {value}\n")
+                lines.append(f"{key:<26}: {value}\n")
         lines.append("================================\n")
         return ''.join(lines)
     

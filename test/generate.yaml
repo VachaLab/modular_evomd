@@ -6,7 +6,7 @@ extra_mutation: False
 also_mutate_probability: 0.4
 # ------------------
 mixture_options: [hybrids, faces, swap]
-mixture_options: [1, 1, 1]
+mixture_weights: [1, 1, 1]
 # ------------------
 face_slice_angle: 120
 face_reference: negative
@@ -16,10 +16,10 @@ maximum_swap_ratio: 0.4
 swap_reconstruct: parent
 swap_random_probability: 0.1
 # ------------------
-positive_preference: False
-positive_atleast: 3
-positive_position: 0.
-positive_tolerance: 0.5
+positive_preference: True
+positive_atleast: 4
+positive_position: -0.3
+positive_tolerance: 0.7
 negative_preference: True
 negative_atleast: 1
 negative_position: -1.
@@ -27,11 +27,13 @@ negative_tolerance: 0.5
 # ------------------
 hydrophobic_restriction: True
 hydrophobic_threshold: 5.5
+hdistribution_restriction: True
+hdistribution_threshold: 2.0
 hindex_restriction: True
 hindex_threshold: -7.0
-charged_extrema: True
+charged_extrema: False
 charge_restriction: True
-charge_min: 2.
+charge_min: 3.
 charge_max: 6.
 # ------------------
 prohibited_patterns: 
@@ -50,5 +52,5 @@ sequences:
 
   ]
 peptide_len: 22
-population: 32
+population: 1
 mut_aa: ADEFGHIKLMNQRSTVWY  # C and P were removed

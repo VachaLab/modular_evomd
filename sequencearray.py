@@ -47,7 +47,7 @@ class SequenceArray(MutableSequence):
 
     _sequences = SeqArrayField()
 
-    def __init__(self, sequences=None) -> None:
+    def __init__(self, sequences: List[Sequence] = None) -> None:
         if sequences is None:
             setattr(self, '_sequences', self._schema['_sequences'].default)
         try:

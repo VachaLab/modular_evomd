@@ -23,7 +23,6 @@ def get_evolver(args, skip_new=False, internal=False):
         # New session
         inst = Instructor(args.file)
         evo = Evolver(inst)
-        evo.save_pkl()
     elif args.evopkl and utils.exists(args.evopkl):
         evo = utils.read_pkl(args.evopkl)
     elif utils.exists(evo_pre):

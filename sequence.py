@@ -135,6 +135,46 @@ class Sequence:
         return ''.join(as_list)
 
     # properties -----------------------------------
+    @property
+    def z_center(self):
+        z_pos = np.array([k.z for k in self.residues])
+        return np.mean(z_pos)
+    
+    @property
+    def z_max(self):
+        z_pos = np.array([k.z for k in self.residues])
+        return np.max(z_pos)
+    
+    @property
+    def z_min(self):
+        z_pos = np.array([k.z for k in self.residues])
+        return np.min(z_pos)
+    
+    @property
+    def h_min(self):
+        h_values = np.array([k.hydrophobicity for k in self.residues])
+        return np.min(h_values)
+    
+    @property
+    def h_max(self):
+        h_values = np.array([k.hydrophobicity for k in self.residues])
+        return np.max(h_values)
+    
+    @property
+    def hdistribution(self):
+        half_sequence = len(self.sequence)/2
+        total_neg = sum([k.hydrophobicity for k in self.residues if k.hydrophobicity < 0])
+        side_1 = -total_neg
+        side_2 = -total_neg
+        for num, res in enumerate(self.residues):
+            if num < half_sequence:
+                side_1 += res.hydrophobicity
+            else:
+                side_2 += res.hydrophobicity
+        diff = abs(side_2 - side_1)
+
+        return round(diff, 4)
+
     def compute_charge(self):
         charges = [k.charge for k in self.residues]
         return sum(charges)
