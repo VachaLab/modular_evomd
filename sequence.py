@@ -59,7 +59,7 @@ class Sequence:
         # --- properties ---
         self.hydrophobic_moment, self.hydrophobic_vector = self.compute_hydrophobic_moment()
         self.align_hmoment()  # orient the sequence respect to vector of hydrophobicity
-        self.hydrophobic_index = round(sum([k.hydrophobicity for k in self.residues]), 4)
+        self.hydrophobic_index = round(sum([k.hydrophobicity for k in self.residues]), 3)
         self.charge = self.compute_charge()
         self.n_ter_charge = self.residues[0].charge
         self.c_ter_charge = self.residues[-1].charge
