@@ -349,7 +349,7 @@ def analyzer_method(sequence) -> float:
     """
     # list of membranes
     membranes = ['ecoli', 'human']
-    maximum = 5.5
+    maximum = 5.0
 
     # run wham
     gmx_wham(membranes=membranes)

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import shutil
 import subprocess
 
-num_windows = 17  # change here the numbre of windows for umbrella sampling
+num_windows = 14  # change here the numbre of windows for umbrella sampling
 
 bash_equ = """
 #!/bin/bash
@@ -77,15 +77,8 @@ if [ $? -ne 0 ]; then exit 2; fi  # exit if this fails
 mkdir -p "${ROOTDIR}/confs"
 echo "System" | gmx trjconv -s pull.tpr -f pull.xtc -o ${ROOTDIR}/confs/conf.gro -sep
 
-# compute distances
-# num=$(ls ${ROOTDIR}/confs/conf*.gro 2>/dev/null | wc -l)
-# for (( i=0; i<$num; i++ )); do
-#     python3 ${SCRP}/distance_pure.py ${ROOTDIR}/confs/conf${i}.gro ${i} >> distances.txt
-# done
-
 # select confs
-# python3 ${SCRP}/select_confs.py distances.txt NUMWINDOWS 6.0 &> configurations.txt
-python3 ${SCRP}/select_confs_pullx.py pull_pullx.xvg NUMWINDOWS 6.0 &> configurations.txt
+python3 ${SCRP}/select_confs_pullx.py pull_pullx.xvg NUMWINDOWS 5.2 &> configurations.txt
 read -r line < configurations.txt
 
 # run windows
