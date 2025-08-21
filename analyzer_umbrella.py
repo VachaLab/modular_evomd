@@ -47,8 +47,9 @@ class DataSet:
         return np.array(xdata), xaxis, np.array(ydata), yaxis
 
 class Profile(DataSet):
-    def __init__(self, filename, max=None):
+    def __init__(self, filename, name='profile', max=None):
         super().__init__(filename)
+        self.profile_name = name
         self.xdata = []
         self.ydata = []
         self.xaxis = ''
@@ -235,10 +236,10 @@ class Plot:
 
     def plot_profile(self):
         # Plotting the first profile
-        self.ax1.plot(self.profile1.xdata, self.profile1.ydata, lw=1.5, c='blue', label='Profile 1')
+        self.ax1.plot(self.profile1.xdata, self.profile1.ydata, lw=1.5, c='blue', label=self.profile1.profile_name)
         
         # Plotting the second profile
-        self.ax1.plot(self.profile2.xdata, self.profile2.ydata, lw=1.5, c='red', label='Profile 2')
+        self.ax1.plot(self.profile2.xdata, self.profile2.ydata, lw=1.5, c='red', label=self.profile2.profile_name)
 
         # Marking the maxima and minima for profile 1
         self.ax1.plot(self.profile1.xdata[self.profile1.indice_max], self.profile1.max, 'bo')  # Max for profile 1
@@ -284,6 +285,8 @@ def parser():
     parser = argparse.ArgumentParser(description ='Plot PMF profile')
     parser.add_argument('--profile1', help='XVG profile to plot',  type=str, default=None)
     parser.add_argument('--profile2',   help='XVG histogram to plot',type=str, default=None)
+    parser.add_argument('--name1', help='Name for profile 1', type=str, default='Profile 1')
+    parser.add_argument('--name2', help='Name for profile 2', type=str, default='Profile 2')
     parser.add_argument('-save', '--save',  help='True: save plot, False: not save', default='True')
     parser.add_argument('-text', '--text',  help='True: include text, False: not include text', default='True')
     parser.add_argument('-out', '--out',  help='Output name', type=str, default='output.png')
@@ -302,8 +305,8 @@ def parser():
 
 def main():
     prs = parser()
-    profile1 = Profile(prs.profile1, prs.max)
-    profile2 = Profile(prs.profile2, prs.max)
+    profile1 = Profile(prs.profile1, prs.name1, prs.max)
+    profile2 = Profile(prs.profile2, prs.name2, prs.max)
     if eval(prs.spline):
         print("cubic spline")
         profile1.get_cubicspline_profile()
@@ -371,9 +374,9 @@ def analyzer_method(sequence) -> float:
     # if files exist, analyze them
     logger.info(f'Analyzing sequence {str(sequence)}')
     logger.info(f'Directory: {sequence.last_iter_dir}')
-    profile1 = Profile(profile1_file, maximum)
+    profile1 = Profile(profile1_file, membranes[0], maximum)
     profile1.get_cubicspline_profile()
-    profile2 = Profile(profile2_file, maximum)
+    profile2 = Profile(profile2_file, membranes[1], maximum)
     profile2.get_cubicspline_profile()
     # Create plot object
     plot = Plot(profile1, profile2, output='fitness_value.png', show='False', save='True', text='True')
