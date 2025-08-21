@@ -82,6 +82,7 @@ class Profile(DataSet):
 #        print(f'**** {self.indice_max} ****')
 #        print(f'**** {self.max} ****')
         self.dg = round(self.max - self.min, 2)
+        self.normal_minimum()
     
     def get_cubicspline_profile_back(self):
         self.xdata, self.xaxis, self.ydata, self.yaxis = self.read_xvg(self.name, column=1)
@@ -206,6 +207,7 @@ class Profile(DataSet):
 #        print(f'**** {self.indice_max} ****')
 #        print(f'**** {self.max} ****')
         self.dg = round(self.max - self.min, 2)
+        self.normal_minimum()
 
     def get_errors(self, ferrors):
         _, _, self.yerror, _ = self.read_xvg(ferrors, column=2)
@@ -213,6 +215,11 @@ class Profile(DataSet):
         self.error = (self.yerror[self.indice_max] ** 2) + (self.yerror[self.indice_min] ** 2)
         self.error = round(np.sqrt(self.error), 2)
         self.have_error = True
+
+    def normal_minimum(self):
+        self.ydata = self.ydata - self.min
+        self.max = self.max - self.min
+        self.min = 0.0
 
 class Plot:
     def __init__(self, profile1, profile2, output='out.png', show=True, save=True, text=True, x_offset=1.5, y_offset=20):
