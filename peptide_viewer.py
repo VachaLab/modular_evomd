@@ -32,6 +32,11 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
     )
     parser.add_argument(
+        '-phm', '--print-hm',
+        help='Include hydrophobic moment in the plot',
+        action='store_true',
+    )
+    parser.add_argument(
         '-d', '--two-d',
         help='2D plot',
         action='store_true',
@@ -120,6 +125,7 @@ def plot_peptide(args: argparse, seq: Sequence, fig, ax):
                 ax.text(letter_pos[0], letter_pos[1], res.letter + f'{res.index + 1}', size=fontsize, ha='center', va='center')
             else:
                 ax.text(letter_pos[0], letter_pos[1], letter_pos[2], res.letter + f'{res.index + 1}', size=fontsize, ha='center', va='center')
+
         if i > 0:
             if args.two_d:
                 ax.plot([seq.residues[i-1].x, res.x], [seq.residues[i-1].y, res.y], c='gray', lw=1, zorder=1)
@@ -170,7 +176,13 @@ def create_figure(args, seq):
             ax.grid(False)
     ax.set_xlim([-2, 2])  # X range
     ax.set_ylim([-2, 2])  # Y range
-    ax.set_title(r'$\alpha$-Helix')
+
+    title = r'$\alpha$-Helix'
+
+    if args.print_hm:
+        title += f'  Hm: {seq.hydrophobic_moment}'
+
+    ax.set_title(title)
     if args.remove_background:
         ax.set_axis_off()
     return fig, ax
