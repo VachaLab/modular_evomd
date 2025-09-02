@@ -9,6 +9,7 @@ from datetime import datetime
 import importlib
 import importlib.util
 import json
+from residue import Residue
 
 
 class ResidueError(Exception):
@@ -102,8 +103,8 @@ def save_json(object, outfile: str) -> None:
     dictionary = object
     if not isinstance(dictionary, dict):
         dictionary = object.__dict__
-    # remove np.arrays, tuples and sets
-    dictionary = {k: v for k, v in dictionary.items() if not isinstance(dictionary[k], (np.ndarray, tuple, set))}
+    # remove np.arrays, tuples and sets; also Residue class
+    dictionary = {k: v for k, v in dictionary.items() if not isinstance(dictionary[k], (np.ndarray, tuple, set, Residue))}
     print(dictionary, type(dictionary), '************')
     # save as json file
     with open(outfile, 'w') as jsonfile:
