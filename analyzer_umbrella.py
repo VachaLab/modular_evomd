@@ -263,8 +263,8 @@ class Plot:
             text_x = self.profile1.xdata[self.profile1.indice_max] - self.x_offset
             text_y = self.profile1.ydata[self.profile1.indice_min] + self.y_offset
             # create text
-            txt = r'$\Delta G_1 = $' + f'{self.profile1.dg}' + ' kJ/mol'
-            txt += '\n' + r'$\Delta G_2 = $' + f'{self.profile2.dg}' + ' kJ/mol'
+            txt = rf'$\Delta G_{{{self.profile1.profile_name}}} = $' + f'{self.profile1.dg}' + ' kJ/mol'
+            txt += '\n' + rf'$\Delta G_{{{self.profile2.profile_name}}} = $' + f'{self.profile2.dg}' + ' kJ/mol'
             txt += '\n' + r'$\Delta \Delta G = $' + f'{self.delta_dg}' + ' kJ/mol'
             # plot text
             self.ax1.text(text_x, text_y, txt, fontsize=10)
@@ -285,8 +285,8 @@ def parser():
     parser = argparse.ArgumentParser(description ='Plot PMF profile')
     parser.add_argument('--profile1', help='XVG profile to plot',  type=str, default=None)
     parser.add_argument('--profile2',   help='XVG histogram to plot',type=str, default=None)
-    parser.add_argument('--name1', help='Name for profile 1', type=str, default='Profile 1')
-    parser.add_argument('--name2', help='Name for profile 2', type=str, default='Profile 2')
+    parser.add_argument('--name1', help='Name for profile 1', type=str, default='Profile1')
+    parser.add_argument('--name2', help='Name for profile 2', type=str, default='Profile2')
     parser.add_argument('-save', '--save',  help='True: save plot, False: not save', default='True')
     parser.add_argument('-text', '--text',  help='True: include text, False: not include text', default='True')
     parser.add_argument('-out', '--out',  help='Output name', type=str, default='output.png')
