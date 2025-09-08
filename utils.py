@@ -105,6 +105,10 @@ def save_json(object, outfile: str) -> None:
         dictionary = object.__dict__
     # remove np.arrays, tuples and sets; also Residue class
     dictionary = {k: v for k, v in dictionary.items() if not isinstance(dictionary[k], (np.ndarray, tuple, set, Residue))}
+    # Check for lists where all elements are instances of Residue and remove them
+    for k, v in list(dictionary.items()):
+        if isinstance(v, list) and any(isinstance(i, Residue) for i in v):
+            del dictionary[k]
     print(dictionary, type(dictionary), '************')
     # save as json file
     with open(outfile, 'w') as jsonfile:
