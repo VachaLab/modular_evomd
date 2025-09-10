@@ -91,6 +91,42 @@ class Evolver:
                 fitness = seq.get_mean_fitness()
                 fo.write(f'{seq.sequence},{fitness},{str(seq.is_elite)},{len(seq.fitness)},{seq.generation}\n')
 
+    def plot_evolution(self):
+        import math
+        import matplotlib.pyplot as plt
+
+        sequences_plot = self.parent_sequences + self.discarded_sequences
+        avail_gens = list(set([k.generation for k in sequences_plot]))
+
+        averages = []
+        all_fitness = []
+        for num in avail_gens:
+            gen_fitness = [float(k.get_mean_fitness()) for k in [n for n in sequences_plot if int(n.generation) == int(num)]]
+            # remove nan
+            gen_fitness = [k for k in gen_fitness if not math.isnan(k)]
+            
+            all_fitness.extend(gen_fitness)
+            all_fitness.sort(reverse=True)
+
+            gen_average = sum(all_fitness[:self.instructor.top_list]) / self.instructor.top_list
+            averages.append(round(gen_average, 3))
+        print('-------------')
+        print('Generations:', avail_gens)
+        print('Average fitness:', averages)
+        print('-------------')
+        
+        # plot 
+        fig, ax = plt.subplots()
+        ax.plot(avail_gens, averages, marker="o", linestyle="-", linewidth=1)
+        ax.set_title('Evolution')
+        ax.set_xlabel('Number of generations')
+        ax.set_ylabel(f'Top-{self.instructor.top_list} Average fitness')
+        plt.xticks(np.arange(min(avail_gens), max(avail_gens)+1, 1))  # from 0 to 9, 1 by 1
+
+        fig.tight_layout()
+        plt.show()
+        fig.savefig('evolution.png', dpi=300)
+
     # validators ------------------------------------------------------
     def is_valid_sequence(self, seq) -> bool:
         """Check if the sequence is valid. Returns True if it is valid."""

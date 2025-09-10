@@ -188,6 +188,12 @@ def main():
         # total
         logger.info(f'Total: {total} sequences')
         exit(0)
+    
+    elif args.plot_evolution:
+        evo = get_evolver(args)
+        # plot_evolution
+        evo.plot_evolution()
+        exit(0)
 
     elif args.test:
         """

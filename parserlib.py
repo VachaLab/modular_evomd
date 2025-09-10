@@ -102,6 +102,12 @@ def get_arguments() -> argparse.Namespace:
         help='Display all the sequences by list in evolver.'
     )
 
+    parser.add_argument(
+        '-pe', '--plot-evolution',
+        action='store_true',
+        help='Plot evolution ans exit.'
+    )
+
     # test
     parser.add_argument(
         '-test', '--test',
