@@ -37,7 +37,12 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
     )
     parser.add_argument(
-        '-d', '--two-d',
+        '-d2', '--two-d',
+        help='2D plot',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-d3', '--three-d',
         help='2D plot',
         action='store_true',
     )
@@ -73,6 +78,9 @@ def get_arguments() -> argparse.Namespace:
     )
 
     args = parser.parse_args()
+
+    if not args.three_d:
+        args.two_d = True
 
     return args
 
