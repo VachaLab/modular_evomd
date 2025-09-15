@@ -108,7 +108,7 @@ class Evolver:
             all_fitness.extend(gen_fitness)
             all_fitness.sort(reverse=True)
 
-            gen_average = sum(all_fitness[:self.instructor.top_list]) / self.instructor.top_list
+            gen_average = sum(all_fitness[:self.instructor.population]) / self.instructor.population
             averages.append(round(gen_average, 3))
         print('-------------')
         print('Generations:', avail_gens)
@@ -120,7 +120,7 @@ class Evolver:
         ax.plot(avail_gens, averages, marker="o", linestyle="-", linewidth=1)
         ax.set_title('Evolution')
         ax.set_xlabel('Number of generations')
-        ax.set_ylabel(f'Top-{self.instructor.top_list} Average fitness')
+        ax.set_ylabel('Mean fitness')
         plt.xticks(np.arange(min(avail_gens), max(avail_gens)+1, 1))  # from 0 to 9, 1 by 1
 
         fig.tight_layout()
