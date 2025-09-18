@@ -5,7 +5,7 @@ import logging
 
 def setup_logging():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format='%(levelname)s: %(message)s'
     )
 #--------------------------------------------
@@ -86,6 +86,8 @@ def main():
 
     elif args.show_evolver:
         evo = get_evolver(args, skip_new=True)
+        if args.top_list:
+            evo.instructor.top_list = int(args.top_list)
         logger.info('Showing Evolver . . .')
         print(evo)
         exit(0)

@@ -44,6 +44,13 @@ def get_arguments() -> argparse.Namespace:
         help='Display evolver information and exit.'
     )
 
+    # Show  Evolver
+    parser.add_argument(
+        '-tl', '--top-list',
+        help='Modifies number of sequences to show when --show-evolver is called. Must be an integer.',
+        default=None
+    )
+
     # Report all sequences
     parser.add_argument(
         '-rs', '--report-sequences',
