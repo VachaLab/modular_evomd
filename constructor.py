@@ -33,6 +33,7 @@ class Model:
             'POPC':  0.,
             'POSM':  0.,
             'CDL2': -2.,
+            'POPS': -1.,
         }
         self.aminoacids = {
             'ALA', 'ACE', 'NME', 'ARG', 'ASN', 'ASP',
