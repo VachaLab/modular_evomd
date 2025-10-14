@@ -85,11 +85,11 @@ class Evolver:
         Write information of all sequences in a sequences_report.csv file
         """
         with open('sequences_report.csv', 'w') as fo:
-            fo.write('sequence,fitness,elite,iterations,generation\n')
+            fo.write('sequence,generation,Hm,Hi,fitness\n')
             all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
             for seq in all_sequences:
                 fitness = seq.get_mean_fitness()
-                fo.write(f'{seq.sequence},{fitness},{str(seq.is_elite)},{len(seq.fitness)},{seq.generation}\n')
+                fo.write(f'{seq.sequence},{seq.generation},{seq.hydrophobic_moment},{seq.hydrophobic_index},{fitness}\n')
 
     def plot_evolution(self):
         import math
@@ -183,14 +183,14 @@ class Evolver:
 
         # Hydrophobic moment restrictions
         if self.instructor.hydrophobic_restriction:
-            if test_seq.hydrophobic_moment < self.instructor.hydrophobic_threshold:
+            if self.instructor.hydrophobic_min <= test_seq.hydrophobic_moment <= self.instructor.hydrophobic_max:
                 true_values.append(True)
             else:
                 true_values.append(False)
         
         # Hydrophobic index restrictions
         if self.instructor.hindex_restriction:
-            if test_seq.hydrophobic_index > self.instructor.hindex_threshold:
+            if self.instructor.hindex_min <= test_seq.hydrophobic_index <= self.instructor.hindex_max:
                 true_values.append(True)
             else:
                 true_values.append(False)

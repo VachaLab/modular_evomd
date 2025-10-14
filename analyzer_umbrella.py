@@ -329,7 +329,7 @@ def change_dir(path):
     finally:
         os.chdir(prev)
 
-def gmx_wham(membranes=['ecoli', 'human']):
+def gmx_wham(membranes=['ecoli', 'popc']):
     for m in membranes:
         with change_dir(m):
             file_confs = 'configurations.txt'
@@ -358,7 +358,7 @@ def analyzer_method(sequence) -> float:
     It always uses cubicsplines method.
     """
     # list of membranes
-    membranes = ['ecoli', 'human']
+    membranes = ['ecoli', 'popc']
     maximum = 5.0
 
     # run wham

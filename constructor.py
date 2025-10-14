@@ -624,7 +624,7 @@ def constructor_method(sequence) -> None:
         logger.error("COORDIR environment variable not set.")
         raise EnvironmentError("COORDIR is required but not defined.")
     # list of membranes
-    membranes = ['ecoli', 'human']
+    membranes = ['ecoli', 'popc']
     for m in membranes:
         try:
             with change_dir(m):

@@ -48,14 +48,12 @@ class Instructor:
     # --- restrictions ---
     hydrophobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # scale to compute hydrophobic moment: eisenberg, kyte-doolittle, wimley-white, fauchere-pliska. Hm is alway calculated.
     hydrophobic_restriction = Instruction(bool, True)  # 
-    hydrophobic_threshold = Instruction(float, 5.5)  #
     hydrophobic_min = Instruction(float, 5.5)
     hydrophobic_max = Instruction(float, +100)
 
     hindex_restriction = Instruction(bool, False)  # 
-    hindex_threshold = Instruction(float, -7.0)  #
-    hindex_min = Instruction(float, -7.0)
-    hindex_max = Instruction(float, +100)
+    hindex_min = Instruction(float, -9.0)
+    hindex_max = Instruction(float, -6.5)
 
     hdistribution_restriction = Instruction(bool, False)
     hdistribution_threshold = Instruction(float, 2.)

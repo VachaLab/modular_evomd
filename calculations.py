@@ -44,6 +44,7 @@ SCRP=/storage/brno14-ceitec/shared/softmatter/alejandro/evo-md/scripts
 # minimize energy
 gmx_mpi grompp -f ${MDP}/minimization.mdp -c system.pdb -r system.pdb -p system.top -n system.ndx -o minimization.tpr &> grompp_minimization.info
 gmx_mpi mdrun -ntomp ${NTOMP} -s minimization.tpr -deffnm minimization -cpi minimization.cpt -v &> mdrun_minimization.info
+if [ $? -ne 0 ]; then exit 2; fi  # exit if this fails
 
 # equilibration_1
 gmx_mpi grompp -f ${MDP}/equilibration_1.mdp -c minimization.gro -r minimization.gro -p system.top -n system.ndx -o equilibration_1.tpr &> grompp_equilibration_1.info
@@ -67,6 +68,7 @@ mpirun -np ${NTMPI} --bind-to ${BINDTO} gmx_mpi mdrun -dlb ${DLB} -pin ${PIN} -p
 # equilibration_5
 gmx_mpi grompp -f ${MDP}/equilibration_5.mdp -c equilibration_4.gro -r restraints.gro -p system.top -n system.ndx -o equilibration_5.tpr &> grompp_equilibration_5.info
 mpirun -np ${NTMPI} --bind-to ${BINDTO} gmx_mpi mdrun -dlb ${DLB} -pin ${PIN} -pinstride ${PINSTRIDE} -ntomp ${NTOMP} -nb ${NB} -tunepme -bonded ${BONDED} -update ${UPDATE} -s equilibration_5.tpr -deffnm equilibration_5 -cpi equilibration_5.cpt -v &> mdrun_equilibration_5.info
+if [ $? -ne 0 ]; then exit 2; fi  # exit if this fails
  
 # pulling
 gmx_mpi grompp -f ${MDP}/pull.mdp -c equilibration_5.gro -r restraints.gro -p system.top -n system.ndx -o pull.tpr &> grompp_pull.info
@@ -126,7 +128,7 @@ def calculator_method(sequence) -> None:
     """
     logger.info(f'Executing sequence {str(sequence)}')
     # list of membranes
-    membranes = ['ecoli', 'human']
+    membranes = ['ecoli', 'popc']
     for m in membranes:
         logger.info(f'Membrane: {m}')
         root_dir = os.path.join(os.getcwd(), m)
@@ -152,7 +154,7 @@ def calculator_check(sequence) -> bool:
     receives a sequence and returns True when the computation is ready
     """
     logger.info(f'Checking sequence {str(sequence)}')
-    membranes = ['ecoli', 'human']
+    membranes = ['ecoli', 'popc']
     true_values = []  # all of these values must be True to consider that the job has finished
     logger.debug('-------')
     for m in membranes:
