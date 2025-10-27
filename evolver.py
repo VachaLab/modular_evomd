@@ -184,16 +184,16 @@ class Evolver:
         # Hydrophobic moment restrictions
         if self.instructor.hydrophobic_restriction:
             if self.instructor.hydrophobic_min <= test_seq.hydrophobic_moment <= self.instructor.hydrophobic_max:
-                true_values.append(True)
-            else:
                 true_values.append(False)
+            else:
+                true_values.append(True)
         
         # Hydrophobic index restrictions
         if self.instructor.hindex_restriction:
             if self.instructor.hindex_min <= test_seq.hydrophobic_index <= self.instructor.hindex_max:
-                true_values.append(True)
-            else:
                 true_values.append(False)
+            else:
+                true_values.append(True)
         
         # Hydrophobic distribution restrictions
         if self.instructor.hdistribution_restriction:
@@ -856,7 +856,7 @@ class Evolver:
             if not self.fits_length(seq):
                 # skip if length does not fit
                 continue
-            if not self.is_valid_sequence(seq):
+            if not self.is_valid_sequence(seq) and self.instructor.check_validity:
                 # skip is is not a valid sequence
                 continue
             # create Sequence object
