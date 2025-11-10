@@ -22,6 +22,7 @@ def constructor_method(sequence) -> None:
     """
     pass
 
+==== same file as calculator_check()
 def calculator_method(sequence) -> None:
     """
     receives a sequence and run calculations.

@@ -91,6 +91,8 @@ def save_pkl(object, outfile: str) -> None:
     with open(outfile, 'wb') as fo:
         logger.info(f'Writing {outfile} . . .')
         pickle.dump(object, fo)
+        fo.flush()             # Vacía el búfer del intérprete
+        os.fsync(fo.fileno())  # Fuerza escritura física a disco
 
 def read_pkl(infile):
     with open(infile, 'rb') as fi:
@@ -109,7 +111,7 @@ def save_json(object, outfile: str) -> None:
     for k, v in list(dictionary.items()):
         if isinstance(v, list) and any(isinstance(i, Residue) for i in v):
             del dictionary[k]
-    print(dictionary, type(dictionary), '************')
+    # print(dictionary, type(dictionary), '************')
     # save as json file
     with open(outfile, 'w') as jsonfile:
         logger.info(f'Writing {outfile} . . .')

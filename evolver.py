@@ -1140,7 +1140,7 @@ class Evolver:
 
         # What are the convergence criteria?
         # Here we have just a maximum number of cycles
-        if self.generations >= 1000:
+        if self.generations >= 500:
             logger.info("Evolver: Max generations reached --> stopping")
             self.runnable = False
 

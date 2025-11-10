@@ -144,6 +144,7 @@ class Manager:
         seq_ready_status = [not s.is_running for s in self.evolver.sequences]  # this list must be all true to stop while.
 
         # loop to check computations several times
+        time.sleep(self.evolver.instructor.sleep_time)
         check_cycles = 0
         while not all(seq_ready_status):
             # show time
