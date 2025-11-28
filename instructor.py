@@ -33,8 +33,8 @@ class Instructor:
     mut_aa = Instruction(str, 'ACDEFGHIKLMNPQRSTVWY')  # default = all natural amino acids
     peptide_len = Instruction(int, 22)  # length of peptides
     population = Instruction(int, 120)  # size of the population to be simulated
-    populate_method = Instruction(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random'})
-    first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random'})  # first fill of Evolver.sequences
+    populate_method = Instruction(str, 'mixture', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random',})
+    first_fill = Instruction(str, 'random', choices={'mixture', 'hybrids', 'mutations', 'swap', 'faces', 'random',})  # first fill of Evolver.sequences
     populate_weighted = Instruction(bool, False)  # if true, better peptides have preference as parent
     extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
     also_mutate_probability = Instruction(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
@@ -73,6 +73,11 @@ class Instructor:
     negative_position = Instruction(float, -1., range=[-1, 1])
     negative_tolerance = Instruction(float, 0.26)
 
+    # --- Activate locked positions ---
+    lock_residues = False # 
+    locked_positions = Instruction(list, [], subtype=int) # positions to be locked
+    locked_residues = Instruction(list, [], subtype=str) # residues locked in the same order as locked_positions
+    
     # --- for mixture method ---
     mixture_options = Instruction(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str, subchoices={'random', 'hybrids', 'mutations', 'swap', 'faces'})  # mixture of population methods. Default: all the available methods but random
     mixture_weights = Instruction(list, [1, 1, 1, 1], subtype=int)  # weights for choosing method. also_mutate_probability should be 0 if no more than 1 mutation is needed

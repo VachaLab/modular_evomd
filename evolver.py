@@ -363,9 +363,12 @@ class Evolver:
         """Generate a random peptide sequence."""
         logger.debug('---------RANDOM--------')
         son_seq = ''.join(random.choices(self.instructor.mut_aa, k=self.instructor.peptide_len))
+        if self.instructor.lock_residues and len(self.instructor.locked_positions) > 1:
+            for pos, res in zip(self.instructor.locked_positions, self.instructor.locked_residues):
+                son_seq[pos] = res
         logger.debug(f'{son_seq} < result')
         return son_seq
-
+    
     def swap_sequence(self, parent1, parent2=None, helix=True) -> str:
         """destroy a section of a sequence and reconstruct it from parent2 or randomly if parent2=None"""
         logger.debug('---------SWAP--------')
