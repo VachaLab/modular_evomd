@@ -115,6 +115,12 @@ def get_arguments() -> argparse.Namespace:
         help='Plot evolution ans exit.'
     )
 
+    parser.add_argument(
+        '-lg', '--last-generation',
+        action='store_true',
+        help='Go back to the last completed generation.'
+    )
+
     # test
     parser.add_argument(
         '-test', '--test',

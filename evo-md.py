@@ -197,6 +197,22 @@ def main():
         evo.plot_evolution()
         exit(0)
 
+    elif args.last_generation:
+        import math
+        evo = get_evolver(args)
+        # list with sequences evaluated
+        evo.discarded_sequences = [k for k in evo.discarded_sequences if k.get_mean_fitness() is not None and not math.isnan(k.get_mean_fitness())]
+        evo.parent_sequences = []
+        evo.sequences = []
+        evo.generations = max(set([k.generation for k in evo.discarded_sequences]))
+        print(f"Las completed generation: {evo.generations}")
+        print(f"Completed sequences: {len(evo.discarded_sequences)}")
+        evo.sort_sequences()
+        evo.save_pkl()  # save after sorting
+        evo.populate()
+        evo.save_pkl()  # save again
+        print(evo)
+
     elif args.test:
         """
         This sections is used to include testing code
