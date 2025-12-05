@@ -98,15 +98,20 @@ class Evolver:
         sequences_plot = self.parent_sequences + self.discarded_sequences
         avail_gens = list(set([k.generation for k in sequences_plot]))
 
+        reverse = True  # maximize is default
+        if str(self.instructor.optimize).lower() == 'minimize':
+            reverse = False
+
         averages = []
         all_fitness = []
         for num in avail_gens:
-            gen_fitness = [float(k.get_mean_fitness()) for k in [n for n in sequences_plot if int(n.generation) == int(num)]]
+            this_gen = [n for n in sequences_plot if int(n.generation) == int(num)]
+            gen_fitness = [float(k.get_mean_fitness()) for k in this_gen]
             # remove nan
             gen_fitness = [k for k in gen_fitness if not math.isnan(k)]
             
             all_fitness.extend(gen_fitness)
-            all_fitness.sort(reverse=True)
+            all_fitness.sort(reverse=reverse)
 
             gen_average = sum(all_fitness[:self.instructor.population]) / self.instructor.population
             averages.append(round(gen_average, 3))
