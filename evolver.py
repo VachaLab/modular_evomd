@@ -553,7 +553,7 @@ class Evolver:
         cutoff = 0.35  # distance to the two neighbor positions
         res_pos = parent.residues[idx].xy  # positions of the chosen residue
         res_sort = lambda r: np.linalg.norm(r.xy - res_pos)
-        other_res = [k for k in parent.residues if k.index != sequence.residues[res].index and res_sort(k) < cutoff]
+        other_res = [k for k in parent.residues if k.index != parent.residues[idx].index and res_sort(k) < cutoff]
         av_h = sum([k.hydrophobicity for k in other_res])/len(other_res)
 
         # choose new residue
@@ -569,11 +569,14 @@ class Evolver:
         else:
             normalized = [(v - v_min) / (v_max - v_min) for v in weights]
 
-        new_aa = random.choices([k.letter for k in aa_pool], weights=normalized, k=1)[0]
+        new_aa = random.choices([k.letter for k in aa_pool.residues], weights=normalized, k=1)[0]
         logger.debug('{}{}'.format(' '*idx, new_aa))
 
         # create the son sequence
         son_seq = parent[:idx] + new_aa + parent[idx + 1:]
+
+        logger.debug('Neighbours: {}'.format([k.letter for k in other_res]))
+        logger.debug('Average hydrophobicity: {}'.format(round(av_h, 3)))
         logger.debug('{} < result'.format(son_seq))
         
         return son_seq
