@@ -1,21 +1,20 @@
 # === test.py ===
+from instructor import Instructor
+from evolver import Evolver
+import utils
 
-from sequence import Sequence
-from sequencearray import SequenceArray
+
+def main():
+    evo_pre = 'evolver.pkl'
+    evo = utils.read_pkl(evo_pre)
+    print(evo.instructor)
+    new_inst = Instructor('inputfile.yaml')
+    new_evo = Evolver(instructor=new_inst)
+    evo.instructor = new_inst
+    print(evo.instructor)
+    evo.save_pkl()
 
 if __name__ == '__main__':
-    sequences = [
-        'R'*11 + 'I'*11,
-        'LMKRMLMQQKRLGRQQHKAIET',
-        'LHFKEKYAHGMALASRKNLSKI',
-        'LKKYKEHARAGLHIANFLSKMS',
-        'QKLSRAIAKGKDNLKEYKLNMS',
-    ]
+    main()
 
-    sarray = SequenceArray(sequences=[Sequence(k) for k in sequences])
-    
-    for seq in sarray:
-        print(seq, '---')
-        print(seq.charge, seq.hydrophobic_moment, seq.hydrophobic_index, seq.hdistribution)
-        print('---')
     

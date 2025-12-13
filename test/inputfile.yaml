@@ -1,19 +1,22 @@
-optimize: maximize
-populate_method: mutations
+optimize: minimize
+populate_method: mixture
 mixture_options: [
   faces,
   mutations,
   swap,
 ]
 mixture_weights: [
-  6,    
-  3,       
-  1,
+  4,    
+  4,       
+  2,
 ]
 populate_weighted: False
-extra_mutation: False
+extra_mutation: True
 also_mutate_probability: 0.4
-first_fill: swap
+
+include_discarded: False
+
+first_fill: mixture
 check_validity: False
 face_reference: negative
 face_slice_angle: 120
@@ -22,10 +25,10 @@ minimum_swap_ratio: 0.1
 swap_reconstruct: parent
 swap_random_probability: 0.05
 # ------------------
-positive_preference: True
+positive_preference: False
 positive_position: 0.
 positive_tolerance: 0.5
-negative_preference: True
+negative_preference: False
 negative_position: -1.
 negative_tolerance: 0.5
 # ------------------
@@ -37,54 +40,25 @@ prohibited_patterns:
   AAAA,
   RRRR,
   EEEE,
-  '([A-Z])\1{2,}',
+  GG,
   ]
 peptide_len: 22
 sequences: 
   [
-  VFMFIDSAFHKFKWIFQRFRHN,
-  THSVNQSFANFHNRVKHLWSNM,
-  NIKQWQQNMVQRLRSTFQHFTQ,
-  SKLKTFLEQMKNKLNQAHEVWM,
-  NWFFTRFRHFANNVMYMMATIW,
-  IQMFRMAYMRIQQTYQTWQERV,
-  MRNFAWKVIQKSYNLAQILQTF,
-  NVKSTLQRMKNQIEDIRHRTRN,
-  ATTWRELIQRMRDWMWWFHHRI,
-  NQTIFMLIQKYRNIWHYFFHLV,
-  NRFRQMVNIVMEAMSQATHKSW,
-  AYQVKQFMNKINYIITMMVNTA,
-  AMHKIHYVFQKIRHALNHFTWL,
-  QFWVQKVKQLMFSMHNLIAQFF,
-  MQRVSSASSYFQNWINVIYNKW,
-  TRYRELVYRIRQRLQNVTDIHN,
-  NMLYQKWHSVKNASQDLFHRVS,
-  YLVHKIYNFVQVFRHNISIMYN,
-  ISKVQWQMYQFLTVFRNFFTAI,
-  LVTSAFDRVKQKIAYIFELIKI,
-  WAKLHDWLQNWAHNMRVFWTKI,
-  LSKLKQWITSLNQLISSISVVL,
-  AKLHSVVWRFKNILTHAKDIIQ,
-  IVHYLHTLQNRWKQLFANWVNL,
-  YNMIVNWLQKLRMIFMIFLHIL,
-  FQKLAQIYQQVYQKWRWAFESY,
-  NNAFNRYMTHVNYVWAFSRNFI,
-  YKFADFWQISHQWLRNTVQRMA,
-  YMREFVQRFNTLFSHLQHKFVN,
-  SIRNFWNRVANFLFILYSNSNN,
-  IRVLNLFHNINNNYRNFASFWW,
-  TNNQQALHQMRNNYNRLNNIVQ,
   ]
-hydrophobic_threshold: 5.5
-charge_restriction: True
-charge_min: 2.
-charge_max: 6.
+
+# --- restrictions ---
+hydrophobic_restriction: True
+hydrophobic_min: 5.5
+hdistribution_restriction: False
+hindex_restriction: False
+charge_restriction: False
 iterations_elite: 1
-population: 150
-discard_ratio: 0.7
-mut_aa: ADEFHIKLMNQRSTVWY  # G C and P were removed
+population: 16
+discard_ratio: 0.5
+mut_aa: ADEFGHIKLMNQRSTVWY  #  C and P were removed
 constructor: constructor # constructor method
 calculator: calculations # calculator method
 analyzer: analyzer_umbrella # analyzer method
 sleep_time: 1800  # 30 min
-max_check_cycle: 200 # 100 hours = 4.2 days
+max_check_cycle: 200 # 200 hours = 8.3 days

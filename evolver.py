@@ -360,6 +360,7 @@ class Evolver:
     def create_sequence(self, seq, generation=0):
         """
         General function to create Sequence objects.
+        Not used.
         """
         h_scale = self.instructor.hydrophobic_scale
         return Sequence(seq, generation=generation, h_scale=h_scale)
@@ -528,6 +529,47 @@ class Evolver:
 
         # choose new residue
         new_aa = random.choice(self.instructor.mut_aa)
+        logger.debug('{}{}'.format(' '*idx, new_aa))
+
+        # create the son sequence
+        son_seq = parent[:idx] + new_aa + parent[idx + 1:]
+        logger.debug('{} < result'.format(son_seq))
+        
+        return son_seq
+    
+    def mutate_similar(self, parent) -> str:
+        """
+        Generates a mutant choosing the new residue based on the hydrophobicity of the 
+        neighbor residues (similarity)
+        """
+        logger.debug('---------SIMILARITY MUTATION--------')
+        logger.debug('{} < parent'.format(parent))
+
+        # choose position to be mutated
+        idx = random.randint(0, self.instructor.peptide_len - 1)
+        logger.debug('{}^'.format(' '*idx))
+
+        # Compute an average hydrophobicity using the neighbor residues (helix)
+        cutoff = 0.35  # distance to the two neighbor positions
+        res_pos = parent.residues[idx].xy  # positions of the chosen residue
+        res_sort = lambda r: np.linalg.norm(r.xy - res_pos)
+        other_res = [k for k in parent.residues if k.index != sequence.residues[res].index and res_sort(k) < cutoff]
+        av_h = sum([k.hydrophobicity for k in other_res])/len(other_res)
+
+        # choose new residue
+        aa_pool = ''.join([k for k in self.instructor.mut_aa if k != parent.residues[idx].letter])
+        aa_pool = Sequence(aa_pool) # create a sequence to have residue information
+        weights = [round(1/(abs(k.hydrophobicity) - av_h + 1e-08),3) for k in aa_pool.residues]
+        # normalize weights x' = x - min / max - min
+        v_min = min(weights)
+        v_max = max(weights)
+
+        if v_max == v_min:
+            normalized = [0.0 for _ in weights]  # degenerated
+        else:
+            normalized = [(v - v_min) / (v_max - v_min) for v in weights]
+
+        new_aa = random.choices([k.letter for k in aa_pool], weights=normalized, k=1)[0]
         logger.debug('{}{}'.format(' '*idx, new_aa))
 
         # create the son sequence
@@ -771,7 +813,10 @@ class Evolver:
                 reverse=False, include_elite=True,
                 include_discarded=self.instructor.include_discarded
                 )
-            candidate = self.mutate_sequence(parent)
+            if self.instructor.mutation_method == 'similarity':
+                candidate = self.mutate_similar(parent)
+            else:
+                candidate = self.mutate_sequence(parent)
             if self.instructor.extra_mutation:
                 # it can be also mutated (check instructor.also_mutate_probability 
                 # and instructor.extra_mutation)
@@ -789,7 +834,7 @@ class Evolver:
 
     def _swap(self):
         """
-        Creates sequences based on cancer method
+        Creates sequences based on swap method
         """
         loop_state = True
         if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
