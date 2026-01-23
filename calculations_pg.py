@@ -128,7 +128,7 @@ def calculator_method(sequence) -> None:
     """
     logger.info(f'Executing sequence {str(sequence)}')
     # list of membranes
-    membranes = ['ecoli', 'popc']
+    membranes = ['pgpe', 'clpe']
     for m in membranes:
         logger.info(f'Membrane: {m}')
         root_dir = os.path.join(os.getcwd(), m)
@@ -154,7 +154,7 @@ def calculator_check(sequence) -> bool:
     receives a sequence and returns True when the computation is ready
     """
     logger.info(f'Checking sequence {str(sequence)}')
-    membranes = ['ecoli', 'popc']
+    membranes = ['pgpe', 'clpe']
     true_values = []  # all of these values must be True to consider that the job has finished
     logger.debug('-------')
     for m in membranes:

@@ -1,15 +1,4 @@
 # === analyzer_umbrella.py ===
-
-"""
-fitness function:
-
-            | (g1 - g2)(1 - g2/g1)    if g1 > g2
-f(g1, g2) = | 
-            |  0                      otherwise
-
-No curve fitting is used
-"""
-
 # logging instead of print
 import logging
 logger = logging.getLogger(__name__)
@@ -340,7 +329,7 @@ def change_dir(path):
     finally:
         os.chdir(prev)
 
-def gmx_wham(membranes=['ecoli', 'human']):
+def gmx_wham(membranes=['ecoli', 'popc']):
     for m in membranes:
         with change_dir(m):
             file_confs = 'configurations.txt'
@@ -369,7 +358,7 @@ def analyzer_method(sequence) -> float:
     It always uses cubicsplines method.
     """
     # list of membranes
-    membranes = ['ecoli', 'human']
+    membranes = ['pgpe', 'clpe']
     maximum = 5.0
 
     # run wham
@@ -387,28 +376,16 @@ def analyzer_method(sequence) -> float:
     logger.info(f'Directory: {sequence.last_iter_dir}')
     profile1 = Profile(profile1_file, membranes[0], maximum)
     profile1.get_profile()
+    # if profile1.dg < 20:
+    #     return 0.0
     profile2 = Profile(profile2_file, membranes[1], maximum)
     profile2.get_profile()
     # Create plot object
-    plot = Plot(profile1, profile2, output='ddg_value.png', show='False', save='True', text='True')
+    plot = Plot(profile1, profile2, output='fitness_value.png', show='False', save='True', text='True')
     plot.plot_profile()
     plot.ending()
     plot.closefig()
-
-    # are dg values positive? --> they should be
-    # return fitness = 0 if they are negative
-    if profile1.dg < 0 or profile2.dg < 0:
-        return 0
-
-    # implementation of the fitness function
-    if profile1.dg > profile2.dg:
-        dg_ratio = profile2.dg / profile1.dg
-        dg_diff = profile1.dg - profile2.dg
-        fitness = dg_diff * (1 - dg_ratio)
-        fitness = round(fitness, 2)
-    else:
-        fitness = 0
-    return fitness
+    return plot.delta_dg
 
 
 if __name__ == '__main__':

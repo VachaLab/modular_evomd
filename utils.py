@@ -89,7 +89,7 @@ def exists(filename: str) -> bool:
 
 def save_pkl(object, outfile: str) -> None:
     with open(outfile, 'wb') as fo:
-        logger.info(f'Writing {outfile} . . .')
+        logger.debug(f'Writing {outfile} . . .')
         pickle.dump(object, fo)
         fo.flush()             # Vacía el búfer del intérprete
         os.fsync(fo.fileno())  # Fuerza escritura física a disco

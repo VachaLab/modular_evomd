@@ -14,6 +14,9 @@ class Residue:
         self.letter = letter
         self.index = index
         self.charge = Scales.aa_charges[self.letter]
+        self.volume = Scales.aa_volumes[self.letter]
+        self.mass = Scales.aa_masses[self.letter]
+        # self.group = Scales.aa_group[self.letter]
         self.hydrophobicity = Scales.hydrophobicity_scales[scale][self.letter]
         self.position = self._compute_position()
         self.set_rotated_position = self.position
@@ -58,6 +61,25 @@ class Residue:
     @property
     def xy(self):
         return self.position[:2]
+
+    @property
+    def cvec(self):
+        try:
+            vec = np.array([self.hydrophobicity, self.charge, self.group])
+        except:
+            self.group = Scales.aa_group[self.letter]
+            vec = np.array([self.hydrophobicity, self.charge, self.group])
+        return vec/np.linalg.norm(vec)
+
+    @property
+    def character(self):
+        return self.group + self.hydrophobicity
+
+    @property
+    def group(self):
+        group = Scales.aa_group[self.letter]
+        return group
+
 
 if __name__ == '__main__':
     pass

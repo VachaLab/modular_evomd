@@ -90,7 +90,7 @@ class Instructor:
     face_slice_angle = Instruction(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
     face_reference = Instruction(str, 'random', choices={'positive', 'negative', 'random'})  # this face is taken as base, the oposite face is reconstructed: 'positive', 'negative', 'random'
     # --- for mutate method ---
-    mutation_method = Instruction(str, 'similarity', choices={'random', 'similarity',})
+    mutation_method = Instruction(str, 'similarity', choices={'random', 'similarity', 'hydrophobicity'})
     # --- ---
     check_validity = Instruction(bool, True)  # check first sequences
     discard_ratio = Instruction(float, 0.7)  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today

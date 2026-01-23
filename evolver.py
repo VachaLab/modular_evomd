@@ -540,7 +540,7 @@ class Evolver:
     def mutate_similar(self, parent) -> str:
         """
         Generates a mutant choosing the new residue based on the hydrophobicity of the 
-        neighbor residues (similarity)
+        current residue (similarity)
         """
         logger.debug('---------SIMILARITY MUTATION--------')
         logger.debug('{} < parent'.format(parent))
@@ -549,17 +549,17 @@ class Evolver:
         idx = random.randint(0, self.instructor.peptide_len - 1)
         logger.debug('{}^'.format(' '*idx))
 
-        # Compute an average hydrophobicity using the neighbor residues (helix)
-        cutoff = 0.35  # distance to the two neighbor positions
-        res_pos = parent.residues[idx].xy  # positions of the chosen residue
-        res_sort = lambda r: np.linalg.norm(r.xy - res_pos)
-        other_res = [k for k in parent.residues if k.index != parent.residues[idx].index and res_sort(k) < cutoff]
-        av_h = sum([k.hydrophobicity for k in other_res])/len(other_res)
+        # save hydrophobicity of current residue
+        res_h = parent.residues[idx].hydrophobicity
+        res_c = parent.residues[idx].charge
+        res_cvec = parent.residues[idx].cvec
+        res_g = parent.residues[idx].group
 
         # choose new residue
         aa_pool = ''.join([k for k in self.instructor.mut_aa if k != parent.residues[idx].letter])
         aa_pool = Sequence(aa_pool) # create a sequence to have residue information
-        weights = [round(1/(abs(k.hydrophobicity) - av_h + 1e-08),3) for k in aa_pool.residues]
+        # weights = [round(np.dot(res_cvec, k.cvec) ** 4, 3) for k in aa_pool.residues]
+        weights = [round( 1/(abs(res_g - k.group) + 1E-8) , 3) for k in aa_pool.residues]
         # normalize weights x' = x - min / max - min
         v_min = min(weights)
         v_max = max(weights)
@@ -569,14 +569,57 @@ class Evolver:
         else:
             normalized = [(v - v_min) / (v_max - v_min) for v in weights]
 
-        new_aa = random.choices([k.letter for k in aa_pool.residues], weights=normalized, k=1)[0]
+        new_aa = random.choices([k for k in aa_pool.residues], weights=normalized, k=1)[0]
         logger.debug('{}{}'.format(' '*idx, new_aa))
 
         # create the son sequence
-        son_seq = parent[:idx] + new_aa + parent[idx + 1:]
+        son_seq = parent[:idx] + new_aa.letter + parent[idx + 1:]
 
-        logger.debug('Neighbours: {}'.format([k.letter for k in other_res]))
-        logger.debug('Average hydrophobicity: {}'.format(round(av_h, 3)))
+        logger.debug('Current value: {: } '.format(res_g)) 
+        logger.debug('New value:     {: } '.format(new_aa.group)) 
+        logger.debug('{} < result'.format(son_seq))
+        
+        return son_seq
+
+    def mutate_hydrophobicity(self, parent) -> str:
+        """
+        Generates a mutant choosing the new residue based on the hydrophobicity of the 
+        current residue (similarity)
+        """
+        logger.debug('---------HYDROPHOBICITY MUTATION--------')
+        logger.debug('{} < parent'.format(parent))
+
+        # choose position to be mutated
+        idx = random.randint(0, self.instructor.peptide_len - 1)
+        logger.debug('{}^'.format(' '*idx))
+
+        # save hydrophobicity of current residue
+        res_h = parent.residues[idx].hydrophobicity
+
+        # choose new residue
+        aa_pool = ''.join([k for k in self.instructor.mut_aa if k != parent.residues[idx].letter])
+        aa_pool = Sequence(aa_pool) # create a sequence to have residue information
+        weights = [round( (abs(res_h - k.hydrophobicity) ) , 3) for k in aa_pool.residues]
+        # normalize weights x' = x - min / max - min
+        v_min = min(weights)
+        v_max = max(weights)
+
+        if v_max == v_min:
+            normalized = [0.0 for _ in weights]  # degenerated
+        else:
+            normalized = [(v - v_min) / (v_max - v_min) for v in weights]
+
+        # adjust weights
+        weights = [1-k for k in weights]
+        # weighted choice
+        new_aa = random.choices([k for k in aa_pool.residues], weights=normalized, k=1)[0]
+        logger.debug('{}{}'.format(' '*idx, new_aa))
+
+        # create the son sequence
+        son_seq = parent[:idx] + new_aa.letter + parent[idx + 1:]
+
+        logger.debug('Current value: {: } '.format(res_h)) 
+        logger.debug('New value:     {: } '.format(new_aa.hydrophobicity)) 
         logger.debug('{} < result'.format(son_seq))
         
         return son_seq
@@ -818,6 +861,8 @@ class Evolver:
                 )
             if self.instructor.mutation_method == 'similarity':
                 candidate = self.mutate_similar(parent)
+            elif self.instructor.mutation_method == 'hydrophobicity':
+                candidate = self.mutate_similar(parent)
             else:
                 candidate = self.mutate_sequence(parent)
             if self.instructor.extra_mutation:
@@ -944,11 +989,12 @@ class Evolver:
         all_sequences = self.discarded_sequences + self.sequences + self.parent_sequences
         for seq in all_sequences:
             if not seq.has_directory:
-                logger.warning(f'Evolver: sequence_backup found a sequence without directory: {str(seq)} --> creating directory')
+                logger.debug(f'Evolver: sequence_backup found a sequence without directory: {str(seq)} --> creating directory')
                 self.manager.create_sequence_directory(seq)
             outfile = os.path.join(seq.directory, 'sequence.json')
             save_json(seq, outfile)
-        logger.info('Evolver: Sequence back up is done :)')
+        logger.debug('Evolver: Sequence back up is done :)')
+        logger.info('Evolver: Sequence back up is done')
 
     # sorting and moving ----------------------------------------------------
     def sort_sequences(self) -> None:

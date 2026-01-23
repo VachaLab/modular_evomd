@@ -1,0 +1,41 @@
+#!/bin/bash
+
+module add gromacs:2021.4-plumed
+export GMXLIB=/storage/brno14-ceitec/shared/softmatter/alejandro/forcefields
+
+# Runtime variables
+NTOMP=8			# use 8 OMP threads. Can try 16 with 2 GPUs - but system should be > 100-150k atoms
+NTMPI=1			# use 1 MPI rank
+NPME=1			# with 1 MPI rank, npme=1
+PIN='off'		# use only mpirun option --bind-to
+PINSTRIDE=1		# not used as PIN=off
+NB='gpu'		# always compute non-bonded interactions on the GPU
+BONDED='gpu'	# if 8 cores/GPU: bonded on GPU, if more, bonded might have to be on CPU
+UPDATE='cpu'	# if the system allows it, try it
+DLB='yes'		# always use dynamic load balancing
+BINDTO='none'	# always - there are possibly better settings which depend on the number of threads used
+
+# Environment variables - mainly not very necessary as most jobs will be ran on 1 GPU and 1 MPI rank.
+export GMX_ENABLE_DIRECT_GPU_COMM=1 	# force GPU direct communication - from gmx 2020
+export GMX_GPU_DD_COMMS=1				# halo exchange - from gmx 2020
+export GMX_GPU_PME_PP_COMMS=1 			# PP-PME ranks can communicate direct GPU-GPU communication
+export OMP_NUM_THREADS=${NTOMP}
+
+MDP=/storage/brno12-cerit/projects/softmatter.old/tanguma/evo-md/mdp
+# change ROOTDIR
+ROOTDIR=RAIZumb
+
+# run grompp if no tpr file is found
+if [[ ! -f "umbrella.tpr" ]]; then
+    gmx_mpi grompp -f ${MDP}/umbrella_full.mdp -c conf.gro -r restraints.gro -p system.top -n system.ndx -o umbrella.tpr -maxwarn 2 &> grompp.info
+    if [ $? -ne 0 ]; then exit 2; fi  # exit if this fails
+fi
+
+if [[ ! -f "umbrella.log" ]] || ! grep -q "Finished" "umbrella.log"; then
+    mpirun -np ${NTMPI} --bind-to ${BINDTO} gmx_mpi mdrun -dlb ${DLB} -pin ${PIN} -pinstride ${PINSTRIDE} -ntomp ${NTOMP} -nb ${NB} -tunepme ${PMEFFT} -bonded ${BONDED} -update ${UPDATE} -s umbrella.tpr -deffnm umbrella -cpi umbrella.cpt -pf umbrella_pullf.xvg -px umbrella_pullx.xvg -v &> mdrun.info
+    if [ $? -ne 0 ]; then exit 2; fi  # exit if this fails
+fi
+
+
+echo "umbCG"
+

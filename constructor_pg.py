@@ -33,6 +33,7 @@ class Model:
             'POPC':  0.,
             'POSM':  0.,
             'CDL2': -2.,
+            'POPS': -1.,
         }
         self.aminoacids = {
             'ALA', 'ACE', 'NME', 'ARG', 'ASN', 'ASP',
@@ -623,13 +624,11 @@ def constructor_method(sequence) -> None:
         logger.error("COORDIR environment variable not set.")
         raise EnvironmentError("COORDIR is required but not defined.")
     # list of membranes
-    membranes = ['ecoli', 'human']
+    membranes = ['pgpe', 'clpe']
     for m in membranes:
         try:
             with change_dir(m):
-                logger.info(f'CONSTRUCTOR: sequence {str(sequence)}')
-                with open('constructor.txt', 'w') as fo:
-                    fo.write(f'Sequence: {str(sequence)}')
+                construct(str(sequence), m, output_prefix='system')
         except Exception as e:
             logger.error(f"Constructor failed for membrane '{m}': {e}")
 

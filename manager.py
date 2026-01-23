@@ -40,13 +40,13 @@ class Manager:
     def create_sequence_directory(self, seq) -> None:
         directory = os.path.join(self.base_dir, str(seq))
         os.makedirs(directory, exist_ok=True)
-        logger.info(f'Manager: Directory created for sequence {str(seq)}')
+        logger.debug(f'Manager: Directory created for sequence {str(seq)}')
         seq.has_directory = True
         seq.directory = directory
 
     def create_iteration_directory(self, seq) -> None:
         if not seq.has_directory:
-            logger.info(f'Manager: Sequence without directory: {str(seq)} --> creating directory')
+            logger.debug(f'Manager: Sequence without directory: {str(seq)} --> creating directory')
             self.create_sequence_directory(seq)
         directory = os.path.join(seq.directory, f'{self.iter_dir_prefix}{seq.simulation_attempts+1}')
         os.makedirs(directory, exist_ok=True)
@@ -138,13 +138,16 @@ class Manager:
             logger.error("Manager: No calculator module defined in Instructor --> exit")
             exit(2)
         # get function
+        logger.debug('Manager: calculator_check value: {}'.format(self.calculator_check))
         calculator_check_function = get_module_function(calculator_module, self.calculator_check, critical=True)
         # set to False: True when all calculations are ready
-
+        
+        logger.debug('Manager: looking for running sequences')
         seq_ready_status = [not s.is_running for s in self.evolver.sequences]  # this list must be all true to stop while.
+        logger.debug('Manager: Running sequences {}'.format(len(seq_ready_status)))
 
         # loop to check computations several times
-        time.sleep(self.evolver.instructor.sleep_time)
+        # time.sleep(self.evolver.instructor.sleep_time)
         check_cycles = 0
         while not all(seq_ready_status):
             # show time

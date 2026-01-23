@@ -358,7 +358,7 @@ def analyzer_method(sequence) -> float:
     It always uses cubicsplines method.
     """
     # list of membranes
-    membranes = ['ecoli', 'popc']
+    membranes = ['clpe', 'pgpe', ]
     maximum = 5.0
 
     # run wham
@@ -376,6 +376,8 @@ def analyzer_method(sequence) -> float:
     logger.info(f'Directory: {sequence.last_iter_dir}')
     profile1 = Profile(profile1_file, membranes[0], maximum)
     profile1.get_profile()
+    if profile1.dg < 20:
+        return 0.0
     profile2 = Profile(profile2_file, membranes[1], maximum)
     profile2.get_profile()
     # Create plot object
