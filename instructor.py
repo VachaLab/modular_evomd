@@ -77,12 +77,12 @@ class Instructor:
     lock_residues = False # 
     locked_positions = Instruction(list, [], subtype=int) # positions to be locked
     locked_residues = Instruction(list, [], subtype=str) # residues locked in the same order as locked_positions
+    
     # --- work with patterns ---
     pattern = Instruction(str, '-'*peptide_len) # '-' are positions to modify
-    pattern_free_positions = [k for k in pattern if k == '-']
-    pattern_options = Instruction(list, [[*mut_aa]]*pattern_free_positions)  # available residues to change each free position '-': all mut_aa by default
-    pattern_weights = Instruction(list, [[1]*len(mut_aa)]*pattern_free_positions)  # weights for each option: equal weights by default
-    pattern_probabilities = Instruction(list, [0.3]*pattern_free_positions) # probability of change in each free position
+    pattern_options = Instruction(list, [])  # available residues to change each free position '-': all mut_aa by default
+    pattern_weights = Instruction(list, [])  # weights for each option: equal weights by default
+    pattern_probabilities = Instruction(list, [])  # probability of change in each free position
     
     # --- for mixture method ---
     mixture_options = Instruction(list, ['hybrids', 'faces', 'mutations', 'swap', ], subtype=str, subchoices={'random', 'hybrids', 'mutations', 'swap', 'faces'})  # mixture of population methods. Default: all the available methods but random
