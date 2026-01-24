@@ -372,6 +372,32 @@ class Evolver:
         logger.debug(f'{son_seq} < result')
         return son_seq
     
+    def pattern_variation(self, parent=None) -> str:
+        """Generate a sequence from a pattern using weights and options"""
+        logger.debug('---------PATTERN--------')
+        # get indexes of free positions
+        free_indexes = [n for n, k in enumerate(self.instructor.pattern) if k == '-']
+        # Choose new aa and decide if mutate or not
+        new_sequence = [k for k in parent.sequence]
+        if parent is None:
+            new_sequence = [k for k in self.instructor.pattern]
+        text = f'Parent sequence is: {''.join(new_sequence)}'
+        logger.debug(text)
+        for n, i in enumerate(free_indexes):
+            mut_decission = self.take_bool_decision(self.instructor.pattern_probabilities[n])
+            new_aa = random.choices(self.instructor.pattern_options[n], weights=self.instructor.pattern_weights[n], k=1)[0]
+            if parent is None:
+                logger.debug('Adding {} in position {}'.format(new_aa, i))
+                new_sequence[i] = new_aa
+                continue
+            if mut_decission:
+                logger.debug('Changing {} by {} in position {}'.format(new_sequence[i], new_aa, i))
+                new_sequence[i] = new_aa
+        final_sequence = ''.join(new_sequence)
+        logger.debug('Final sequence: {}'.format(final_sequence))
+        return final_sequence
+
+    
     def swap_sequence(self, parent1, parent2=None, helix=True) -> str:
         """destroy a section of a sequence and reconstruct it from parent2 or randomly if parent2=None"""
         logger.debug('---------SWAP--------')
@@ -697,7 +723,7 @@ class Evolver:
             # first population
             firs_fill  = self.instructor.first_fill
             logger.info(f'Evolver: First population method is "{firs_fill}"')
-            if len(self.sequences) < 2 and firs_fill not in ['random']:
+            if len(self.sequences) < 2 and firs_fill not in ['random', 'pattern']:
                 logger.warning(f'Evolver: Method "{firs_fill}" cannot be executed with less than 2 parents --> changing to "random"')
                 firs_fill = 'random'
                 self.instructor.first_fill = firs_fill
@@ -736,6 +762,37 @@ class Evolver:
         """     
         while True:
             candidate = self.random_sequence()
+            if self.is_valid_sequence(candidate):
+                break
+        if self.sequence_exists(candidate):
+            candidate = self.take_sequence(candidate)
+            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
+        else:
+            candidate = Sequence(candidate, generation=self.generations)
+        return candidate
+    
+    def _pattern(self):
+        """
+        Creates sequences using self.instructor.pattern
+        """
+        loop_state = True
+        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
+            candidate = self._resurrection()
+            loop_state = False
+                
+        while loop_state:
+            parent = self.choose_sequence(
+                weighted=self.instructor.populate_weighted, 
+                reverse=False, include_elite=True,
+                include_discarded=self.instructor.include_discarded
+                )
+            candidate = self.pattern_variation(parent=parent)
+            if self.instructor.extra_mutation:
+                # it can be also mutated (check instructor.also_mutate_probability 
+                # and instructor.extra_mutation)
+                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
+                if also_mutate:
+                    candidate = self.mutate_sequence(candidate)
             if self.is_valid_sequence(candidate):
                 break
         if self.sequence_exists(candidate):
