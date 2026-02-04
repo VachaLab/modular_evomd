@@ -378,10 +378,12 @@ class Evolver:
         # get indexes of free positions
         free_indexes = [n for n, k in enumerate(self.instructor.pattern) if k == '-']
         # Choose new aa and decide if mutate or not
-        new_sequence = [k for k in parent.sequence]
         if parent is None:
             new_sequence = [k for k in self.instructor.pattern]
-        text = f'Parent sequence is: {''.join(new_sequence)}'
+        else:
+            new_sequence = [k for k in parent.sequence]
+
+        text = f'Parent sequence is: {"".join(new_sequence)}'
         logger.debug(text)
         for n, i in enumerate(free_indexes):
             mut_decission = self.take_bool_decision(self.instructor.pattern_probabilities[n])
@@ -781,11 +783,15 @@ class Evolver:
             loop_state = False
                 
         while loop_state:
-            parent = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True,
-                include_discarded=self.instructor.include_discarded
-                )
+            if self.started:
+                parent = self.choose_sequence(
+                    weighted=self.instructor.populate_weighted, 
+                    reverse=False, include_elite=True,
+                    include_discarded=self.instructor.include_discarded
+                    )
+            else:
+                parent = None
+
             candidate = self.pattern_variation(parent=parent)
             if self.instructor.extra_mutation:
                 # it can be also mutated (check instructor.also_mutate_probability 

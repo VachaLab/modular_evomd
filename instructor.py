@@ -79,7 +79,7 @@ class Instructor:
     locked_residues = Instruction(list, [], subtype=str) # residues locked in the same order as locked_positions
     
     # --- work with patterns ---
-    pattern = Instruction(str, '-'*peptide_len) # '-' are positions to modify
+    pattern = Instruction(str, '-') # '-' are positions to modify
     pattern_options = Instruction(list, [])  # available residues to change each free position '-': all mut_aa by default
     pattern_weights = Instruction(list, [])  # weights for each option: equal weights by default
     pattern_probabilities = Instruction(list, [])  # probability of change in each free position

@@ -39,7 +39,17 @@ def main():
     new_evo.generations = evo_pre.generations
     new_evo.save_pkl()
 
+def transfer_excluded_sequences():
+    evo_pre = 'evolver.pkl'
+    evo_pre = utils.read_pkl(evo_pre)
+    new_inst = Instructor('inputfile.yaml')
+    new_evo = Evolver(instructor=new_inst)
+    evo_pre.instructor = new_evo.instructor
+    evo_pre.excluded_sequences = new_evo.excluded_sequences
+    evo_pre.save_pkl()
+
 if __name__ == '__main__':
-    main()
+    # main()
+    transfer_excluded_sequences()
 
     

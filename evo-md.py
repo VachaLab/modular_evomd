@@ -187,6 +187,14 @@ def main():
             i += 1
         logger.info(f'--> {i} sequences found\n')
         total += i
+        # excluded sequences
+        logger.info('Evolver.excluded_sequences')
+        i = 0
+        for seq in evo.excluded_sequences:
+            logger.info(f'{seq}')
+            i += 1
+        logger.info(f'--> {i} sequences found\n')
+        total += i
         # total
         logger.info(f'Total: {total} sequences')
         exit(0)
