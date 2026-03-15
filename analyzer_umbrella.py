@@ -18,6 +18,34 @@ from contextlib import contextmanager
 
 import subprocess
 
+import yaml
+from typing import Any, Dict
+from pathlib import Path
+
+
+class YAMLHandler:
+    def __init__(self, filename: str):
+        self.filename = Path(filename)
+
+    def load_yaml(self) -> Dict[str, Any]:
+        """Load YAML file and return a dictionary."""
+        if not self.filename.exists():
+            return {'prof1': 0, 'prof2': 1000}
+
+        with self.filename.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            return data if data is not None else {}
+
+    def save_yaml(self, data: Dict[str, Any]) -> None:
+        """Save dictionary to YAML file."""
+        with self.filename.open("w", encoding="utf-8") as f:
+            yaml.safe_dump(
+                data,
+                f,
+                allow_unicode=True,
+                sort_keys=False,
+                default_flow_style=False,
+            )
 
 class DataSet:
     def __init__(self, filename):
@@ -84,7 +112,7 @@ class Profile(DataSet):
 #        print(f'**** {self.max} ****')
         self.dg = round(self.max - self.min, 2)
         self.normal_minimum()
-    
+
     def get_cubicspline_profile_back(self):
         self.xdata, self.xaxis, self.ydata, self.yaxis = self.read_xvg(self.name, column=1)
         # parameters used in removing holes
@@ -344,7 +372,7 @@ def gmx_wham(membranes=['ecoli', 'popc']):
             tpr_files.close()
             pullf_files.close()
             command = [
-                'gmx', 'wham',
+                'gmx_mpi', 'wham',
                 '-it', 'tpr-files.dat',
                 '-if', 'pullf-files.dat'
             ]
@@ -360,9 +388,6 @@ def analyzer_method(sequence) -> float:
     # list of membranes
     membranes = ['ecoli', 'popc']
     maximum = 5.0
-
-    # run wham
-    gmx_wham(membranes=membranes)
 
     # change profile names
     profile1_file = os.path.join(membranes[0], 'profile.xvg')
@@ -383,7 +408,17 @@ def analyzer_method(sequence) -> float:
     plot.plot_profile()
     plot.ending()
     plot.closefig()
-    return plot.delta_dg
+
+    # save dg values
+    yaml = YAMLHandler('Data.yaml')
+    values = {'prof1': profile1.dg, 'prof2': profile2.dg}
+    yaml.save_yaml(values)
+    # Pivot function max value for profile2.dg is 25
+    # penalize negatively if profile2.dg > 20 
+    pivot = 25
+    penalization = (profile2.dg - pivot) / pivot
+
+    return plot.delta_dg * (1 - penalization)
 
 
 if __name__ == '__main__':

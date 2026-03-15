@@ -285,8 +285,10 @@ class Model:
             atoms = self.atoms
         else:
             atoms = self.atoms_by_name(names=atomnames)
+
         # define positions 
         positions = np.array([k.position for k in atoms])
+
         # 1. center of mass
         com = np.mean(positions, axis=0)
         
@@ -547,6 +549,7 @@ def parser():
     parser.add_argument('-s', '--sequence', type=str, required=True, help='Sequence')
     parser.add_argument('-m', '--membrane', type=str, required=True, help='Membrane name')
     parser.add_argument('-p', '--prefix',   type=str, required=False, help='prefix name', default=None)
+    parser.add_argument('-d', '--shift',   type=float, required=False, help='Norm of the randomly directed shift of the peptide on the xy plane', default=None)
 
     # Parse arguments
     args = parser.parse_args()
@@ -554,7 +557,91 @@ def parser():
     return args
 
 
-def construct(sequence, membrane, output_prefix=None):
+def rotation_matrix(v, eje_deseado):
+    """
+    Devuelve una matriz 3x3 de rotación R tal que R @ v queda alineado con el eje indicado.
+
+    Parámetros
+    ----------
+    v : array-like, shape (3,)
+        Vector (x,y,z) con origen en (0,0,0). No debe ser el vector cero.
+    eje_deseado : int
+        Uno de {1,2,3,-1,-2,-3} para {+x,+y,+z,-x,-y,-z}.
+
+    Retorna
+    -------
+    R : ndarray, shape (3,3)
+        Matriz de rotación ortonormal (det ~= +1) que alinea v con el eje deseado.
+        Garantiza R @ v es paralelo al eje objetivo (misma o opuesta dirección según signo).
+    """
+    v = np.asarray(v, dtype=float).reshape(3)
+    nv = np.linalg.norm(v)
+    if nv == 0:
+        raise ValueError("El vector v no puede ser el vector cero.")
+
+    # Vector objetivo unitario según el eje deseado
+    if eje_deseado == 1:
+        t = np.array([1.0, 0.0, 0.0])
+    elif eje_deseado == 2:
+        t = np.array([0.0, 1.0, 0.0])
+    elif eje_deseado == 3:
+        t = np.array([0.0, 0.0, 1.0])
+    elif eje_deseado == -1:
+        t = np.array([-1.0, 0.0, 0.0])
+    elif eje_deseado == -2:
+        t = np.array([0.0, -1.0, 0.0])
+    elif eje_deseado == -3:
+        t = np.array([0.0, 0.0, -1.0])
+    else:
+        raise ValueError("eje_deseado debe ser uno de {1,2,3,-1,-2,-3}.")
+    
+    a = v / nv  # unitario de entrada
+
+    # Si ya están alineados (misma dirección)
+    c = float(np.dot(a, t))  # cos(theta)
+    if np.isclose(c, 1.0, atol=1e-12):
+        return np.eye(3)
+
+    # Si están opuestos (rotación 180° alrededor de cualquier eje perpendicular a a)
+    if np.isclose(c, -1.0, atol=1e-12):
+        # Elegir un vector no colineal con a para construir un eje perpendicular
+        # (heurística robusta)
+        if abs(a[0]) < 0.9:
+            tmp = np.array([1.0, 0.0, 0.0])
+        else:
+            tmp = np.array([0.0, 1.0, 0.0])
+
+        k = np.cross(a, tmp)
+        nk = np.linalg.norm(k)
+        if nk == 0:
+            # Caso extremadamente raro por degeneración numérica
+            tmp = np.array([0.0, 0.0, 1.0])
+            k = np.cross(a, tmp)
+            nk = np.linalg.norm(k)
+            if nk == 0:
+                raise RuntimeError("No se pudo construir un eje de rotación perpendicular.")
+        k = k / nk
+
+        # Rotación 180°: R = -I + 2 k k^T
+        return -np.eye(3) + 2.0 * np.outer(k, k)
+
+    # Caso general: usar fórmula de Rodrigues con eje k = a x t
+    k = np.cross(a, t)
+    s = np.linalg.norm(k)  # sin(theta), > 0 aquí
+    k = k / s
+
+    K = np.array([
+        [0.0,   -k[2],  k[1]],
+        [k[2],   0.0,  -k[0]],
+        [-k[1],  k[0],  0.0],
+    ])
+
+    # Rodrigues: R = I + sinθ K + (1-cosθ) K^2
+    R = np.eye(3) + s * K + (1.0 - c) * (K @ K)
+    return R
+
+
+def construct(sequence, membrane, output_prefix=None, shift=None):
     # COORDIR environment variable must be defined --> where are membrane structure files?
     # in ale
     # export COORDIR=/home/tanguma_ah/martini_evolution/evoMD/evoMD_setup/structures
@@ -564,28 +651,30 @@ def construct(sequence, membrane, output_prefix=None):
     # creator receives sequence and membrane name
     creator = Creator(sequence, membrane)
 
+    # define randomly oriented shift vector
+    rand_vec = np.zeros(3)
+    if shift is not None:
+        rand_shift = np.random.random() * shift
+        rng = np.random.default_rng()
+        rand_vec = rng.uniform(-1.0, 1.0, size=3)
+        rand_vec = np.array([rand_vec[0], rand_vec[1], 0.0])
+        rand_vec /= np.linalg.norm(rand_vec)
+        rand_vec *= rand_shift
+
     # Trasnslate to 7 nm above membrane's center
     vec2 = creator.mem_model.get_center(atomnames=['PO4', 'PO41', 'PO42']) + np.array([0.,0.,60.])
     vec1 = creator.cg_model.get_center(atomnames=['BB'])
-    vec3 = vec2 - vec1
+    vec3 = vec2 - vec1 + rand_vec
     creator.cg_model.translate_to(to=vec3)
     creator.cg_model.update_pdb()
     # creator.cg_model.write_pdb()
     
     # get inertial axis 
     _, evec = creator.cg_model.get_inertia(atomnames=['BB'])
+    
+    # get rotation matrix from evec[0]
+    evec = rotation_matrix(evec[:,0], 1)
 
-    # evec is a rotation matrix. it shoulf be right-handed
-    if np.linalg.det(evec) < 0:
-        evec[:, 2] *= -1
-    
-    # sort evec
-    evec = np.array([
-        evec[1],
-        evec[0],
-        evec[2],
-    ])
-    
     # rotate peptide to align vaa with x axis
     creator.cg_model.rotate(rotmat=evec, around=creator.cg_model.get_center(atomnames='BB'))
     creator.cg_model.update_pdb()
@@ -700,5 +789,5 @@ def penalty_method(sequence) -> float:
 if __name__ == '__main__':
     # receive arguments
     args = parser()
-    construct(args.sequence, args.membrane, output_prefix=args.prefix)
+    construct(args.sequence, args.membrane, output_prefix=args.prefix, shift=args.shift)
 
