@@ -202,7 +202,7 @@ def main():
     elif args.plot_evolution:
         evo = get_evolver(args)
         # plot_evolution
-        evo.plot_evolution(show_std=args.show_std)
+        evo.plot_evolution(show_std=args.show_std, show_kids=args.show_kids)
         exit(0)
 
     elif args.last_generation:

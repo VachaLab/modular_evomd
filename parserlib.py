@@ -119,6 +119,11 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help='Show standard deviation in plot.'
     )
+    parser.add_argument(
+        '-pkids', '--show-kids',
+        action='store_true',
+        help='Show kids in each generation.'
+    )
 
     parser.add_argument(
         '-lg', '--last-generation',

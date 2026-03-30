@@ -91,7 +91,7 @@ class Evolver:
                 fitness = seq.get_mean_fitness()
                 fo.write(f'{seq.sequence},{seq.generation},{seq.hydrophobic_moment},{seq.hydrophobic_index},{fitness}\n')
 
-    def plot_evolution(self, show_std=False):
+    def plot_evolution(self, show_std=False, show_kids=False):
         import math
         import matplotlib.pyplot as plt
 
@@ -103,6 +103,9 @@ class Evolver:
         reverse = True  # maximize is default
         if str(self.instructor.optimize).lower() == 'minimize':
             reverse = False
+
+        # create figure
+        fig, ax = plt.subplots()
 
         # Define lists
         ave_kids = []
@@ -122,13 +125,16 @@ class Evolver:
             worst_kid.append(np.min(all_fit))
             already_checked.sort(reverse=reverse)
             population_fitness.append(sum(already_checked[:self.instructor.population])/self.instructor.population)
+            # include kids? Do it now!
+            if show_kids:
+                current_gen = [g for k in all_fit]
+                ax.scatter(current_gen, all_fit, marker='o', edgecolors='lightgray', facecolors='none', alpha=0.5, s=3)
         print('-------------')
         print('Generations:', avail_gens)
         print('Population fitness:', population_fitness)
         print('-------------')
         
         # plot 
-        fig, ax = plt.subplots()
         ax.plot(avail_gens, population_fitness, color='black', linestyle='-', label='Population', linewidth=2)
         ax.plot(avail_gens, ave_kids, color='green', linestyle='-', label='Av. fitness', linewidth=1)
         ax.plot(avail_gens, best_kid, color='gray', linestyle='--', label='Best fitness', linewidth=1)
