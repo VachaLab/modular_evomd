@@ -91,42 +91,68 @@ class Evolver:
                 fitness = seq.get_mean_fitness()
                 fo.write(f'{seq.sequence},{seq.generation},{seq.hydrophobic_moment},{seq.hydrophobic_index},{fitness}\n')
 
-    def plot_evolution(self):
+    def plot_evolution(self, show_std=False):
         import math
         import matplotlib.pyplot as plt
 
+        # get all sequences with fitness
         sequences_plot = self.parent_sequences + self.discarded_sequences
+        # get all the sequences
         avail_gens = list(set([k.generation for k in sequences_plot]))
 
         reverse = True  # maximize is default
         if str(self.instructor.optimize).lower() == 'minimize':
             reverse = False
 
-        averages = []
-        all_fitness = []
-        for num in avail_gens:
-            this_gen = [n for n in sequences_plot if int(n.generation) == int(num)]
-            gen_fitness = [float(k.get_mean_fitness()) for k in this_gen]
-            # remove nan
-            gen_fitness = [k for k in gen_fitness if not math.isnan(k)]
-            
-            all_fitness.extend(gen_fitness)
-            all_fitness.sort(reverse=reverse)
-
-            gen_average = sum(all_fitness[:self.instructor.population]) / self.instructor.population
-            averages.append(round(gen_average, 3))
+        # Define lists
+        ave_kids = []
+        std_kids = []
+        best_kid = []
+        worst_kid = []
+        population_fitness = []
+        already_checked = []
+        for g in avail_gens:
+            seq_gen = [k for k in sequences_plot if k.generation == g]
+            all_fit = [k.get_mean_fitness() for k in seq_gen]
+            already_checked.extend(all_fit)
+            all_fit = np.array(all_fit)
+            ave_kids.append(np.mean(all_fit))
+            std_kids.append(np.std(all_fit))
+            best_kid.append(np.max(all_fit))
+            worst_kid.append(np.min(all_fit))
+            already_checked.sort(reverse=reverse)
+            population_fitness.append(sum(already_checked[:self.instructor.population])/self.instructor.population)
         print('-------------')
         print('Generations:', avail_gens)
-        print('Average fitness:', averages)
+        print('Population fitness:', population_fitness)
         print('-------------')
         
         # plot 
         fig, ax = plt.subplots()
-        ax.plot(avail_gens, averages, marker="o", linestyle="-", linewidth=1)
-        ax.set_title('Evolution')
-        ax.set_xlabel('Number of generations')
-        ax.set_ylabel('Mean fitness')
-        plt.xticks(np.arange(min(avail_gens), max(avail_gens)+1, 1))  # from 0 to 9, 1 by 1
+        ax.plot(avail_gens, population_fitness, color='black', linestyle='-', label='Population', linewidth=2)
+        ax.plot(avail_gens, ave_kids, color='green', linestyle='-', label='Av. fitness', linewidth=1)
+        ax.plot(avail_gens, best_kid, color='gray', linestyle='--', label='Best fitness', linewidth=1)
+        ax.plot(avail_gens, worst_kid, color='gray', linestyle='-.', label='Worst fitness', linewidth=1)
+
+        # set left axis
+        ax.set_xlabel('Generations')
+        ax.set_ylabel('Fitness')
+        # ax.set_ylim(min(already_checked), max(already_checked))
+
+        # show std?
+        if show_std:
+            # set right axis
+            ax2 = ax.twinx()
+            ax2.plot(avail_gens, std_kids, color='skyblue', linestyle=':', label='Std. dev.', linewidth=1)
+            ax2.set_ylabel('Std. Dev.')
+            # join legens
+            lines_1, labels_1 = ax.get_legend_handles_labels()
+            line_2, labels_2 = ax2.get_legend_handles_labels()
+            ax.legend(lines_1 + line_2, labels_1 + labels_2, loc='best')
+        else:
+            ax.legend(loc='best')
+
+        # plt.xticks(np.arange(min(avail_gens), max(avail_gens)+1, 1))  # from 0 to 9, 1 by 1
 
         fig.tight_layout()
         plt.show()

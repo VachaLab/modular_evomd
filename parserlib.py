@@ -114,6 +114,11 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help='Plot evolution ans exit.'
     )
+    parser.add_argument(
+        '-pstd', '--show-std',
+        action='store_true',
+        help='Show standard deviation in plot.'
+    )
 
     parser.add_argument(
         '-lg', '--last-generation',
