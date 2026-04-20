@@ -60,12 +60,34 @@ class Scales:
     # 0: non-polar
     # 1: aliphatic, 2: aromatic, 3: positive
     aa_group = {
-        'A': 1, 'N': -2, 'C': 0, 'Q': -2,
-        'G': 1, 'H': -1, 'I': 1, 'L': 1,
-        'M': 0, 'F': 2, 'P': 1, 'S': -1,
-        'T': -1, 'W': 2, 'Y': 2, 'V': 1,
-        'R': 3, 'K': 3,
         'D': -3, 'E': -3,
+        'N': -2, 'Q': -2, 'H': -2, 
+        'S': -1, 'T': -1,
+        'C': 0, 'M': 0, 
+        'A': 1, 'G': 1, 'I': 1, 'L': 1, 'P': 1, 'V': 1,
+        'W': 2, 'Y': 2,  'F': 2,
+        'R': 3, 'K': 3,
+    }
+
+
+class Classification:
+    positive = 'KR'
+    negative = 'DE'
+    thiol = 'C'
+    amide = 'NQ'
+    alcohol = 'ST'
+    aromatic = 'FWY'
+    aliphtic = 'AVLI'
+    thioether = 'M'
+    polar = 'H'
+    nonpolar = 'GP'
+    str2int = {
+        'A': 1, 'N': 2, 'C': 3, 'Q': 4,
+        'G': 5, 'H': 6, 'I': 7, 'L': 8,
+        'M': 9, 'F': 10, 'P': 11, 'S': 12,
+        'T': 13, 'W': 14, 'Y': 15, 'V': 16,
+        'R': 17, 'K': 18,
+        'D': 19, 'E': 20,
     }
 
 

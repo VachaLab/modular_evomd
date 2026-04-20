@@ -1,30 +1,37 @@
 # === evolver.py ===
+"""
+Evolver es el motor de la optimización evolutiva. 
+Debe recibir un Generator.
+"""
 import logging
 from sequence import Sequence
 import random
 import numpy as np
-from manager import Manager
 
 
 logger = logging.getLogger(__name__)
 
 
 class Evolver:
-    name = 'evolver'
-
-    def __init__(self, instructor, recover=False) -> None:
-        self.instructor = instructor
-        self.manager = Manager(self)  # Manager creates directories 
+    def __init__(
+            self, manager, generator, population=[], excluded=[], 
+            optimize = "maximize", parent_method = ""
+            recover=False
+            ) -> None:
+        # parámetros de entrada
+        self.manager = manager
+        self.generator = generator
         self.name = self.instructor.evolver_name
-        self.sequences = []
-        self.discarded_sequences = []  # to save discarded Sequences and avoid repetition
-        self.parent_sequences = []
+        self.population = population # self.sequences = sequences current population
+        self.excluded = excluded  # self.excluded_sequences = []
+        # Para organizar individuals
+        self.tested = [] # self.discarded_sequences = []  # to save discarded Sequences and avoid repetition
+        self.parents = []  # self.parent_sequences = []
         self.to_include = []   # this list will be used to insert new sequences in the next generation
-        self.excluded_sequences = []
-        self.failed_sequences = []
-        self.prohibited_patterns = []
-        # set first sequences
-        self.first_sequences()
+        self.failed = []  # self.failed_sequences = []
+        # self.prohibited_patterns = []  esto pasará a ser parte de Generator
+        # avance de la evolución
+        self.optimize = optimize  # maximize o minimize
         self.generations = 0
         self.started = False
         self.runnable = True  # used to stop optimization iteratively
@@ -32,13 +39,12 @@ class Evolver:
     
     # special methods ----------------------------------------
     def __len__(self):
-        return len(self.sequences)
+        return len(self.population)
     
     def __str__(self):
-        pep_len = self.instructor.peptide_len + 2
-        total_sequences = len(self.sequences) + len(self.discarded_sequences) + len(self.parent_sequences)
+        total_sequences = len(self.population) + len(self.tested) + len(self.parents)
         lines = ['===== EVOLVER CURRENT STATE =====\n']
-        lines.append(f"{'Optimization':<24}: {str(self.instructor.optimize)}\n")
+        lines.append(f"{'Optimization':<24}: {str(self.optimize)}\n")
         is_weighted = ''
         if self.instructor.populate_weighted:
             is_weighted = 'weighted-'

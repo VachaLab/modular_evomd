@@ -1,104 +1,100 @@
 # === sequence.py ===
-import numpy as np
-from residue import Residue
 import logging
-from scales import Scales
-from typing import Sequence, Dict
-from instruction_fields import Instruction
-from utils import ResidueError
 import random
-
+from typing import List, Optional
+from residue import Residue
+from scales import Scales
+from utils import ResidueError
 
 logger = logging.getLogger(__name__)
 
-
-class SequenceField(Instruction):
-    def __init__(self):
-        super().__init__(list, None, subchoices=list(Scales.aa_charges))
-    
-    def __set__(self, instance, value):
-        value_list = list(value)
-        for validator in self.validators:
-            if not validator.validate(value_list):
-                raise ResidueError(f'Unrecognized residue in the sequence: {value}')
-        instance.__dict__[self.name] = value
-
-class ScaleField(Instruction):
-    def __init__(self):
-        super().__init__(str, 'eisenberg', choices=list(Scales.hydrophobicity_scales))
+# Valid amino acid letters derived from Scales
+_VALID_AA: set = set(Scales.aa_charges.keys())
 
 
 class Sequence:
-    _schema: Dict[str, Instruction] = {}
+    """
+    Represents a peptide sequence as the individual unit to be optimized.
+    Stores identity, physicochemical summary properties, fitness history,
+    and simulation state. Geometry is handled externally by GenMethod subclasses.
+    """
 
-    name = 'Sequence'
-    sequence = SequenceField()
-    generation = Instruction(int, 0)
-    hydrophobic_scale = ScaleField()
+    def __init__(self, seq: str, generation: int = 0, h_scale: str = 'eisenberg') -> None:
+        # Validate residue letters before creating the object
+        if not seq:
+            raise ResidueError("Sequence cannot be empty.")
+        invalid = [aa for aa in seq if aa.upper() not in _VALID_AA]
+        if invalid:
+            raise ResidueError(f"Unrecognized residue(s) in sequence '{seq}': {invalid}")
+        if h_scale not in Scales.hydrophobicity_scales:
+            raise ValueError(f"Unknown hydrophobicity scale: '{h_scale}'. "
+                             f"Available: {list(Scales.hydrophobicity_scales.keys())}")
 
-    def __init__(self, seq, generation=0, h_scale='eisenberg') -> None:
-        # --- attributes as Instruction ---
-        try:
-            setattr(self, 'sequence', seq)
-        except ResidueError as e:
-            logging.error(f'Check the sequence: {e}')
-            exit(3)
-        try:
-            setattr(self, 'generation', generation)
-        except:
-            setattr(self, 'generation', self._schema['generation'].default)
-        try:
-            setattr(self, 'hydrophobic_scale', h_scale)
-        except:
-            setattr(self, 'hydrophobic_scale', self._schema['hydrophobic_scale'].default)
+        # Core identity
+        self.sequence: str = seq.upper()
+        self.generation: int = generation
+        self.hydrophobic_scale: str = h_scale
 
-        # --- attributes from previous values ---
-        self.residues = [Residue(k, n, self.hydrophobic_scale) for n, k in enumerate(self.sequence)]
-        self.fitness = []
-        self.penalties = []
-        # --- properties ---
-        self.hydrophobic_moment, self.hydrophobic_vector = self.compute_hydrophobic_moment()
-        self.align_hmoment()  # orient the sequence respect to vector of hydrophobicity
-        self.hydrophobic_index = round(sum([k.hydrophobicity for k in self.residues]), 3)
-        self.charge = self.compute_charge()
-        self.n_ter_charge = self.residues[0].charge
-        self.c_ter_charge = self.residues[-1].charge
-        # --- boolean info ---
-        self.is_elite = False
-        self.is_preferent = False
-        self.is_discarded = False
-        self.is_top = False  # true if its index is in elite region
-        self.is_resurrected = False
-        self.is_just_constructed = False
-        self.is_running = False
-        self.is_waiting_analysis = False
-        self.is_failed = False
-        self.has_directory = False
-        # --- counting ---
-        self.simulation_attempts = 0
-        self.completed_simulations = 0
-        self.failed_simulations = 0
-        self.reinsertions = 0  # reinserted into Evolver.sequences by generator
-        self.resurrections = 0  # reinserted into Evolver.sequences by resurrection
-        self.times_elite = 0
-        # --- index and directories ---
-        self.current_index = None
-        self.directory = None
-        self.last_iter_dir = None
-    
-    # special methods -------------------------------
-    def __str__(self):
+        # Residue objects
+        self.residues: List[Residue] = [
+            Residue(letter=aa, index=idx, scale=self.hydrophobic_scale)
+            for idx, aa in enumerate(self.sequence)
+        ]
+
+        # Physicochemical summary properties
+        self.hydrophobic_index: float = round(
+            sum(r.hydrophobicity for r in self.residues), 3
+        )
+        self.charge: float = sum(r.charge for r in self.residues)
+        self.n_ter_charge: float = self.residues[0].charge
+        self.c_ter_charge: float = self.residues[-1].charge
+
+        # Fitness history
+        self.fitness_list: List[float] = []
+
+        # Simulation state flags
+        self.is_elite: bool = False
+        self.is_preferent: bool = False
+        self.is_discarded: bool = False
+        self.is_reinserted: bool = False
+        self.is_top: bool = False
+        self.is_constructed: bool = False
+        self.is_running: bool = False
+        self.is_waiting_analysis: bool = False
+        self.is_failed: bool = False
+
+        # Directory state
+        self.has_directory: bool = False
+        self.directory: Optional[str] = None
+        self.last_iter_dir: Optional[str] = None
+
+        # Counters
+        self.simulation_attempts: int = 0
+        self.completed_simulations: int = 0
+        self.failed_simulations: int = 0
+        self.reinsertions: int = 0
+        self.times_elite: int = 0
+
+        # Position in sorted population
+        self.current_index: Optional[int] = None
+
+    # Special methods -------------------------------------------------------
+
+    def __str__(self) -> str:
         return self.sequence
-    
-    def __len__(self):
+
+    def __repr__(self) -> str:
+        return self.sequence
+
+    def __len__(self) -> int:
         return len(self.sequence)
-    
+
     def __iter__(self):
         return iter(self.sequence)
-    
+
     def __getitem__(self, index):
         return self.sequence[index]
-    
+
     def __add__(self, other):
         if isinstance(other, str):
             return str(self) + other
@@ -108,202 +104,65 @@ class Sequence:
         if isinstance(other, str):
             return other + str(self)
         return NotImplemented
-    
-    def __hash__(self):
-        return hash(tuple(self.sequence))
-    
-    def __eq__(self, other):
+
+    def __hash__(self) -> int:
+        return hash(self.sequence)
+
+    def __eq__(self, other) -> bool:
         if isinstance(other, Sequence):
             return self.sequence == other.sequence
-        elif isinstance(other, str):
+        if isinstance(other, str):
             return self.sequence == other
         return NotImplemented
-    
-    def __repr__(self):
-        return self.sequence
-    
-    def __contains__(self, item):
+
+    def __contains__(self, item) -> bool:
         return item in self.sequence
-    
+
     def __reversed__(self):
         return reversed(self.sequence)
 
-    # sequence modification ------------------------
-    def randomize(self):
+    # Sequence utilities ----------------------------------------------------
+
+    def randomize(self) -> str:
+        """Returns a new sequence string with residues shuffled randomly."""
         as_list = list(self.sequence)
         random.shuffle(as_list)
         return ''.join(as_list)
 
-    # properties -----------------------------------
-    @property
-    def z_center(self):
-        z_pos = np.array([k.z for k in self.residues])
-        return np.mean(z_pos)
-    
-    @property
-    def z_max(self):
-        z_pos = np.array([k.z for k in self.residues])
-        return np.max(z_pos)
-    
-    @property
-    def z_min(self):
-        z_pos = np.array([k.z for k in self.residues])
-        return np.min(z_pos)
-    
-    @property
-    def h_min(self):
-        h_values = np.array([k.hydrophobicity for k in self.residues])
-        return np.min(h_values)
-    
-    @property
-    def h_max(self):
-        h_values = np.array([k.hydrophobicity for k in self.residues])
-        return np.max(h_values)
-    
-    @property
-    def hdistribution(self):
-        half_sequence = len(self.sequence)/2
-        total_neg = sum([k.hydrophobicity for k in self.residues if k.hydrophobicity < 0])
-        side_1 = -total_neg
-        side_2 = -total_neg
-        for num, res in enumerate(self.residues):
-            if num < half_sequence:
-                side_1 += res.hydrophobicity
-            else:
-                side_2 += res.hydrophobicity
-        diff = abs(side_2 - side_1)
+    # Fitness and penalty ---------------------------------------------------
 
-        return round(diff, 4)
-
-    def compute_charge(self):
-        charges = [k.charge for k in self.residues]
-        return sum(charges)
-
-    def compute_hydrophobic_moment(self):
-        # get contributions to hydrophobic vecotr
-        h_vector = np.zeros(3)
-        for res in self.residues:
-            h_vector += res.get_hm_contribution()
-        h_scalar = round(np.linalg.norm(h_vector), 3)
-        return h_scalar, h_vector
-    
-    # geometry ---------------------------------------
-    def align_hmoment(self) -> None:
-        """
-        Align residue positions with respect to hydrophobic moment and 
-        center the z positions
-        """
-        # set hydrophobic vector as reference
-        h_vector = self.hydrophobic_vector / np.linalg.norm(self.hydrophobic_vector)  # normalization
-        z_centrum = np.array([k.position[2] for k  in self.residues])
-        z_centrum = np.mean(z_centrum)
-
-        for res in self.residues:
-            new_cos = res.x * h_vector[0] + res.y * h_vector[1]  # dot
-            new_sin = res.x * h_vector[1] - res.y * h_vector[0]  # cross
-            new_height = res.z - z_centrum
-            res.set_new_position(new_position=np.array([new_cos, new_sin, new_height]))
-
-    # getting information ---------------------------
-    def get_mean_fitness(self):
-        # get fitness
-        if len(self.fitness) == 0:
+    @property
+    def fitness(self) -> Optional[float]:
+        if not self.fitness_list:
             return None
-        fitness = self.fitness
-        # apply penalties
-        if len(self.penalties) > 0:
-            try:
-                fitness = [k * (1 -self.penalties[n]) for n, k in enumerate(self.fitness)]
-            except IndexError:
-                fitness = [k * (1 - self.penalties[0]) for n, k in enumerate(self.fitness)]
-        return sum(fitness) / len(fitness)
+        return sum(self.fitness_list) / len(self.fitness_list)
     
-    def get_mean_penalty(self):
-        if len(self.penalties) == 0:
-            return None
-        return sum(self.penalties) / len(self.penalties)
-        
-    def get_iterations(self):
-        return len(self.fitness)
-    
-    def get_positions(self):
-        return np.array([k.position for k in self.residues])
-    
-    def get_faces(self, phi=180):
-        """
-        Returns both faces. It splits the sequence in the angle phi 
-        respect to hydrobobic vector (phi/2 on each side of the vector).
-        returns lists of indexes 
-        phi is called slice angle in instructor!!
-        """
-        # transform into radians
-        phi = phi * np.pi / 180
-        # border in terms of cosine of phi/2
-        border = np.cos(phi/2)
+    def get_iterations(self) -> int:
+        """Returns the number of fitness evaluations recorded."""
+        return len(self.fitness_list)
 
-        # split residues according to their x position
-        # borders are on phi/2 (left and right)
-        positive_face = []  # hydrophobic
-        negative_face = []  # hydrophilic
-        for res in self.residues:
-            if res.x >= border:
-                positive_face.append(res.index)
-            else:
-                negative_face.append(res.index)
-        return positive_face, negative_face
-    
-    def get_charged_res(self, charge='positive', letters=False):
-        """
-        Returns charged residues:
-        positive, negative or both
-        Return indexes by default.
-        """
-        if charge == 'positive':
-            tester = lambda x: x > 0
-        elif charge == 'negative':
-            tester = lambda x: x < 0
-        elif charge == 'both':
-            tester = lambda x: x != 0
-        else:
-            logger.error('Sequence: get_charged_res: charge value not recognized')
-            exit(3)
-        
-        charged = [k.index for k in self.residues if tester(k.charge)]
+    # Residue queries -------------------------------------------------------
 
+    def get_charged_res(self, charge: str = 'both', letters: bool = False) -> list:
+        """
+        Returns indices (or letters) of residues with the specified charge type.
+        charge: 'positive', 'negative', or 'both'
+        """
+        testers = {
+            'positive': lambda x: x > 0,
+            'negative': lambda x: x < 0,
+            'both':     lambda x: x != 0,
+        }
+        if charge not in testers:
+            raise ValueError(f"Invalid charge filter '{charge}'. Use 'positive', 'negative', or 'both'.")
+        tester = testers[charge]
         if letters:
-            charged = [k.letter for k in self.residues if tester(k.charge)]
+            return [r.letter for r in self.residues if tester(r.charge)]
+        return [r.index for r in self.residues if tester(r.charge)]
 
-        return charged
-    
-    # checker --------------------------------------
-    def check_elite(self) -> bool:
-        # Checks if this sequences must be elite or not
-        if self.is_top:
-            logger.info(f'Sequence: {self.sequence} is elite')
-            self.times_elite += 1
-            self.is_elite = True
-            return True
-        self.is_elite = False
-        return False
-    
-    def check_reinsertion(self, iterations_preferent=3) -> None:
-        if self.is_discarded:
-            self.reinsertions += 1
-            logger.info(f'Sequence: {self.sequence} was reinserted ({self.reinsertions})')
-            self.is_discarded = False
-        if self.reinsertions >= iterations_preferent:
-            self.is_preferent = True
-            logger.info(f'Sequence: {self.sequence} is preferent')
-    
-    def check_resurrection(self) -> None:
-        self.is_resurrected = True
-        self.resurrections += 1
-        logger.info(f'Sequence: {self.sequence} is resurrected')
-
-    def check_consecutive_aa(self, max_rep) -> bool:
+    def check_consecutive_aa(self, max_rep: int) -> bool:
         """
-        Check if there are repetition in consecutive residues.
-        Returns True is repetition is >= max_rep
+        Returns True if any amino acid appears consecutively max_rep or more times.
         """
         if len(self.sequence) < max_rep:
             return False
@@ -316,6 +175,35 @@ class Sequence:
             else:
                 repetitions = 1
         return False
+
+    # State management ------------------------------------------------------
+
+    def check_elite(self) -> bool:
+        """
+        Marks the sequence as elite if it occupies a top-ranked position.
+        Returns True if elite status is confirmed.
+        """
+        if self.is_top:
+            logger.info(f"Sequence {self.sequence} is elite")
+            self.times_elite += 1
+            self.is_elite = True
+            return True
+        self.is_elite = False
+        return False
+
+    def check_reinsertion(self, iterations_preferent: int = 3) -> None:
+        """
+        Updates state flags when a sequence is recovered from the discarded list.
+        Marks the sequence as preferent if reinsertions reach the threshold.
+        """
+        self.reinsertions += 1
+        self.is_discarded = False
+        self.is_reinserted = True
+        logger.info(f"Sequence {self.sequence} was reinserted ({self.reinsertions})")
+        if self.reinsertions >= iterations_preferent:
+            self.is_preferent = True
+            logger.info(f"Sequence {self.sequence} is preferent")
+
 
 if __name__ == '__main__':
     pass

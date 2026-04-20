@@ -1,85 +1,33 @@
 # === residue.py ===
-import numpy as np
 import logging
 from scales import Scales
 
 logger = logging.getLogger(__name__)
 
+
 class Residue:
-    name = 'residue'
-    increment = -1  # used to compute height
-    theta = 100  # used to compute position on a unit circle
+    """
+    Represents a single amino acid residue within a peptide sequence.
+    Stores physicochemical properties indexed by position.
+    Geometry and spatial calculations are handled externally by GenMethod subclasses.
+    """
 
-    def __init__(self, letter, index, scale) -> None:
-        self.letter = letter
-        self.index = index
-        self.charge = Scales.aa_charges[self.letter]
-        self.volume = Scales.aa_volumes[self.letter]
-        self.mass = Scales.aa_masses[self.letter]
-        # self.group = Scales.aa_group[self.letter]
-        self.hydrophobicity = Scales.hydrophobicity_scales[scale][self.letter]
-        self.position = self._compute_position()
-        self.set_rotated_position = self.position
-    
-    # special methods -------------------------------
-    def __str__(self):
+    def __init__(self, letter: str, index: int = 0, scale: str = 'eisenberg') -> None:
+        self.letter: str = letter
+        self.index: int = index
+        self.charge: float = Scales.aa_charges[self.letter]
+        self.volume: float = Scales.aa_volumes[self.letter]
+        self.mass: float = Scales.aa_masses[self.letter]
+        self.hydrophobicity: float = Scales.hydrophobicity_scales[scale][self.letter]
+        self.group: int = Scales.aa_group[self.letter]
+
+    def __str__(self) -> str:
         return self.letter
-    
-    # set properties ----
-    def _compute_position(self):
-        """
-        Computes 3D position and returns
-        """
-        rad = np.deg2rad(self.theta)
-        angle = self.index * rad
-        height = self.index * self.increment
-        cos = np.cos(angle)
-        sin = np.sin(angle)
-        return np.array([cos, sin, height])
-    
-    def set_new_position(self, new_position):
-        self.position = new_position
-    
-    # get information ----
-    def get_hm_contribution(self):
-        xy_plane_moment = self.hydrophobicity * self.position[:2]
-        xyz_cont = np.array([xy_plane_moment[0], xy_plane_moment[1], 0.])
-        return xyz_cont
-    
-    @property
-    def x(self):
-        return self.position[0]
-    
-    @property
-    def y(self):
-        return self.position[1]
-    
-    @property
-    def z(self):
-        return self.position[2]
-    
-    @property
-    def xy(self):
-        return self.position[:2]
 
-    @property
-    def cvec(self):
-        try:
-            vec = np.array([self.hydrophobicity, self.charge, self.group])
-        except:
-            self.group = Scales.aa_group[self.letter]
-            vec = np.array([self.hydrophobicity, self.charge, self.group])
-        return vec/np.linalg.norm(vec)
-
-    @property
-    def character(self):
-        return self.group + self.hydrophobicity
-
-    @property
-    def group(self):
-        group = Scales.aa_group[self.letter]
-        return group
+    def __repr__(self) -> str:
+        return f"Residue(letter={self.letter!r}, index={self.index})"
 
 
 if __name__ == '__main__':
     pass
+    
