@@ -1,3 +1,6 @@
+from genmethod import GenMethod
+
+
 class Generator:
-    pass
-    
+    def __init__(self, genmethod: GenMethod = None) -> None:
+        pass

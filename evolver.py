@@ -5,6 +5,9 @@ Debe recibir un Generator.
 """
 import logging
 from sequence import Sequence
+from sequencearray import SequenceArray
+from generator import Generator
+from manager import Manager
 import random
 import numpy as np
 
@@ -14,14 +17,14 @@ logger = logging.getLogger(__name__)
 
 class Evolver:
     def __init__(
-            self, manager, generator, population=[], excluded=[], 
-            optimize = "maximize", parent_method = ""
+            self, generator: Generator = None, population: SequenceArray = None, excluded: SequenceArray = None, 
+            parents: SequenceArray = None, name: str = '',
+            optimize = "maximize", parent_method = "",
             recover=False
             ) -> None:
         # parámetros de entrada
-        self.manager = manager
         self.generator = generator
-        self.name = self.instructor.evolver_name
+        self.name = name
         self.population = population # self.sequences = sequences current population
         self.excluded = excluded  # self.excluded_sequences = []
         # Para organizar individuals
