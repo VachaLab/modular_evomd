@@ -209,6 +209,16 @@ def change_directory(path: str) -> None:
     os.chdir(path)
     logger.info(f"Changed working directory to: {path}")
 
+def int_to_roman(n: int) -> str:
+    """Converts a positive integer to its Roman numeral representation."""
+    values  = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+    symbols = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I']
+    result = ''
+    for v, s in zip(values, symbols):
+        while n >= v:
+            result += s
+            n -= v
+    return result
 
 if __name__ == '__main__':
     pass

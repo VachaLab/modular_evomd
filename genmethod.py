@@ -1,9 +1,9 @@
 from sequence import Sequence
 
 class GenMethod:
-    def _to_str(self, seq: "str | Sequence") -> str:
-        """Normalizes a sequence identifier to an uppercase string."""
-        return str(seq).upper()
-    
+    def __init__(self, mut_aa: str, peptide_len: int, **kwargs):
+        self.mut_aa = mut_aa
+        self.peptide_len = peptide_len
+
     def generate(self, seq1: Sequence = None, seq2: Sequence = None) -> str:
-        return 
+        raise NotImplementedError
