@@ -297,7 +297,7 @@ def _run_pipeline(args: argparse.Namespace) -> None:
     Shared by both main() and plot_sequence().
     """
     seq = Sequence(args.sequence) if isinstance(args.sequence, str) else args.sequence
-    cmap = cm.get_cmap(args.cmap)
+    cmap = plt.get_cmap(args.cmap)
 
     # Compute geometry before alignment to preserve the HM scalar magnitude
     positions = compute_helix_positions(seq)
