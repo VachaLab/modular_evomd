@@ -20,7 +20,7 @@ def compute_helix_positions(seq: Sequence) -> np.ndarray:
     positions = np.array([
         [
             np.cos(i * theta_rad),
-            np.sin(i * theta_rad),
+            -np.sin(i * theta_rad),
             i * _INCREMENT,
         ]
         for i in range(len(seq))
