@@ -10,7 +10,7 @@ _INCREMENT: float = -1.0     # height increment per residue
 
 # --- Geometry functions ----------------------------------------------------
 
-def compute_helix_positions(seq: Sequence) -> np.ndarray:
+def compute_helix_positions(seq: Sequence, translate: bool = False) -> np.ndarray:
     """
     Computes 3D helix positions for each residue using fixed helix parameters.
     Centers the helix at (0, 0, 0) by subtracting the mean position.
@@ -25,7 +25,8 @@ def compute_helix_positions(seq: Sequence) -> np.ndarray:
         ]
         for i in range(len(seq))
     ])
-    positions -= positions.mean(axis=0)
+    if translate:
+        positions -= positions.mean(axis=0)
     return positions
 
 
@@ -60,6 +61,22 @@ def align_to_minus_y(positions: np.ndarray, hm_vector: np.ndarray) -> np.ndarray
     vector points toward -Y. Z coordinates are preserved unchanged.
     """
     target = np.array([0.0, -1.0])
+    hx, hy = hm_vector
+    tx, ty = target
+    angle = np.arctan2(ty, tx) - np.arctan2(hy, hx)
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    rotated = positions.copy()
+    rotated[:, 0] = positions[:, 0] * cos_a - positions[:, 1] * sin_a
+    rotated[:, 1] = positions[:, 0] * sin_a + positions[:, 1] * cos_a
+    return rotated
+
+def align_to(positions: np.ndarray, hm_vector: np.ndarray, target: np.ndarray) -> np.ndarray:
+    """
+    Rotates all positions in the XY plane so that the hydrophobic moment
+    vector points toward target = np.array([0.0, -1.0]). 
+    Z coordinates are preserved unchanged.
+    """
     hx, hy = hm_vector
     tx, ty = target
     angle = np.arctan2(ty, tx) - np.arctan2(hy, hx)

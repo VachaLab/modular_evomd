@@ -3,11 +3,8 @@ import math
 import sys
 import numpy as np
 from sequence import Sequence
-from sequence_geometry import (
-    compute_helix_positions,
-    compute_hm_vector,
-    align_to_minus_y,
-)
+from sequence_geometry import *
+from intervals import CircleInterval
 
 _N_SECTIONS: int = 18
 
@@ -37,6 +34,16 @@ def _angular_distance(a: float, b: float) -> float:
     """
     diff = abs(a - b) % (2 * math.pi)
     return min(diff, 2 * math.pi - diff)
+
+def _get_res_sec(sec: int, residues: list) -> str:
+    """
+    Get the letter of a residue or gives '-' if no residue belongs
+    to section sec.
+    """
+    for res, val in residues:
+        if val == sec:
+            return res
+    return '-'
 
 
 def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
@@ -71,7 +78,7 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
     # so that the hydrophobic moment reflects the complete peptide.
     positions = compute_helix_positions(seq)
     hm_vector = compute_hm_vector(seq, positions)
-    positions = align_to_minus_y(positions, hm_vector)
+    positions = align_to(positions, hm_vector, target=np.array([1., 0.]))
 
     # Determine indices to exclude
     if exclude is None:
@@ -86,22 +93,38 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
         if res.index not in exclude_set
     ]
 
-    # Compute bisector angle for each section, following the same approach
-    # as peptide_viewer.plot_sections: section 0 bisector points toward -Y (-pi/2),
-    # sections are numbered counterclockwise.
+    # Compute section angle
     segment_angle = 2 * math.pi / _N_SECTIONS
-    bisector_0 = -math.pi / 2
-    bisectors = [bisector_0 + i * segment_angle for i in range(_N_SECTIONS)]
 
-    # Assign each core residue to the section whose bisector is angularly closest
-    section_map: dict[int, str] = {}  # section_index -> residue letter
+    # Create intervals for sections
+    segment_start = 0 - segment_angle / 2
+    intervals = []
+    for n, sg in enumerate(range(_N_SECTIONS)):
+        start = segment_start + sg * segment_angle
+        end = segment_angle + start
+        intervals.append(CircleInterval(start=start, end=end, lclosed=False, rclosed=True, tag=n))
+
+    print(len(intervals))
+    print(intervals)
+    # Assign each core residue to the section
+    # Find section by lambda function
+    find_section = lambda a: [interval.tag for interval in intervals if interval(a)][0]
+
+    section_map: list[int, str] = []  # section_index -> residue letter
     for res, pos in core:
-        angle = math.atan2(pos[1], pos[0])
-        closest = min(range(_N_SECTIONS), key=lambda i: _angular_distance(angle, bisectors[i]))
-        section_map[closest] = res.letter
-
+        angle = np.mod(math.atan2(pos[1], pos[0]), 2*np.pi)
+        sec = find_section(angle)
+        section_map.append([res.letter, sec])
+    
+    # Sort residues by section
+    section_map.sort(key=lambda k: k[1])
+    print(section_map)
     # Build the radial sequence from section I (index 0) to XVIII (index 17)
-    radial = ''.join(section_map.get(i, '-') for i in range(_N_SECTIONS))
+    radial = []
+    for n in range(_N_SECTIONS):
+        rep = _get_res_sec(n, section_map)
+        radial.append(rep)
+    radial = ''.join(radial)
 
     return radial
 

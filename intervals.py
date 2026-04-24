@@ -123,9 +123,12 @@ class CircleInterval(Interval):
 
         # Convert degree boundaries to radians and normalize to [0, 2π).
         if self.degrees:
-            self.start = math.radians(self.start) % (2 * math.pi)
-            self.end = math.radians(self.end) % (2 * math.pi)
-
+            self.start = math.radians(self.start)
+            self.end = math.radians(self.end)
+        
+        self.start %= 2*math.pi
+        self.end %= 2*math.pi
+        
     def eval_value(self, value: float) -> bool:
         # Convert value to radians if input is in degrees.
         if self.degrees:
@@ -135,15 +138,23 @@ class CircleInterval(Interval):
         value %= 2 * math.pi
 
         # Check left boundary.
-        left_bool = value >= self.start if self.lclosed else value > self.start
+        if self.lclosed:
+            left_bool = value >= self.start
+        else:
+            left_bool = value > self.start
+
         # Check right boundary.
-        right_bool = value <= self.end if self.rclosed else value < self.end
+        if self.rclosed:
+            right_bool =  value <= self.end
+        else:
+            right_bool = value < self.end
 
         # When end < start, the interval wraps around the circle (e.g. 330° to 30°).
         # Membership requires satisfying either boundary condition.
         if self.end < self.start:
             return left_bool or right_bool
-        return left_bool and right_bool
+        else:
+            return left_bool and right_bool
 
 
 if __name__ == '__main__':
