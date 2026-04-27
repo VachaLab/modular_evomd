@@ -74,7 +74,9 @@ def align_to_minus_y(positions: np.ndarray, hm_vector: np.ndarray) -> np.ndarray
 def align_to(positions: np.ndarray, hm_vector: np.ndarray, target: np.ndarray) -> np.ndarray:
     """
     Rotates all positions in the XY plane so that the hydrophobic moment
-    vector points toward target = np.array([0.0, -1.0]). 
+    vector points toward target 
+    ex. 
+    target = np.array([0.0, -1.0]) 
     Z coordinates are preserved unchanged.
     """
     hx, hy = hm_vector

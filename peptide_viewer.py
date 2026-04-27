@@ -104,32 +104,41 @@ def plot_peptide(
     """
     # Hydrophobic moment vector arrow pointing toward -Y
     if args.two_d:
-        ax.plot([0, 0], [0, -1.5], lw=2, c='deepskyblue', zorder=1)
+        # Hydrophobicity vector:
+        # Change from simple line
+        # ax.plot([0, 0], [0, -1.5], lw=2, c='deepskyblue', zorder=1)
+        # to array.
+        ax.arrow(0, 0, 0, -1.5, color='deepskyblue', zorder=1, shape='full', lw=2, head_width=0.08, head_length=0.15)
     else:
         ax.plot([0, 0], [0, -1.5], [0, 0], lw=2, c='deepskyblue')
 
     visited_xy = []
     for i, (res, pos) in enumerate(zip(seq.residues, positions)):
         x, y, z = pos
-        df = 1.0
+        df = 1.
 
         if args.two_d:
             overlap = [np.linalg.norm(np.array([x, y]) - v) < 0.05 for v in visited_xy]
             if visited_xy and any(overlap):
-                df = 1.2
-            ax.scatter(x * df, y * df, c=[colors[res.index]], s=100, alpha=1, zorder=3)
+                df = 1.3
+            ax.scatter(x * df, y * df, c=[colors[res.index]], s=350, alpha=1, zorder=3)
             visited_xy.append(np.array([x, y]))
         else:
             ax.scatter(x, y, z, c=[colors[res.index]], s=100, alpha=0.8)
 
         if args.letters:
+            # Brightness of background color
+            # Simple brightness calculation
+            brightness = 0.299 * colors[res.index][0] + 0.587 * colors[res.index][1] + 0.114 * colors[res.index][2]
+            text_color = 'white' if brightness < 0.5 else 'black'
+            # Place letters        
             scale = 1.4
-            lx, ly = x * scale * df, y * scale * df
+            lx, ly = x * df, y * df
             label = res.letter + str(res.index + 1)
             if args.two_d:
-                ax.text(lx, ly, label, size=9, ha='center', va='center')
+                ax.text(lx, ly, label, size=9, ha='center', va='center', c=text_color)
             else:
-                ax.text(lx, ly, z, label, size=9, ha='center', va='center')
+                ax.text(lx * scale, ly * scale, z, label, size=9, ha='center', va='center')
 
         if i > 0:
             prev = positions[i - 1]
