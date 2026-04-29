@@ -20,6 +20,7 @@ class Evolver:
             self, generator: Generator = None, population: SequenceArray = None, excluded: SequenceArray = None, 
             parents: SequenceArray = None, name: str = '',
             optimize = "maximize", parent_method = "",
+            reinsertion: bool = False, include_parents: bool = False,
             recover=False
             ) -> None:
         # parámetros de entrada

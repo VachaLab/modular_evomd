@@ -44,15 +44,17 @@ def compute_hm_vector(seq: Sequence, positions: np.ndarray) -> np.ndarray:
     return hm / norm
 
 
-def compute_hm_scalar(seq: Sequence, positions: np.ndarray) -> float:
+def compute_hm_scalar(seq: Sequence, positions: np.ndarray, average: bool = False) -> float:
     """
     Computes the hydrophobic moment scalar magnitude before alignment.
     Must be called before align_to_minus_y() to preserve the original vector.
     """
     hm = np.zeros(2)
     for res, pos in zip(seq.residues, positions):
-        hm += res.hydrophobicity * pos[:2]
-    return float(np.linalg.norm(hm))
+       hm += res.hydrophobicity * pos[:2]
+    if average:
+        hm /= len(seq.residues)
+    return float(np.linalg.norm(hm)) # / len(seq.residues)  # is it necesary to average hm?
 
 
 def align_to_minus_y(positions: np.ndarray, hm_vector: np.ndarray) -> np.ndarray:

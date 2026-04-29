@@ -1,4 +1,4 @@
-# === hybrid_method.py ===
+# === hybrid.py ===
 from __future__ import annotations
 import logging
 import random
