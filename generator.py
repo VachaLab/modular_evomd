@@ -124,7 +124,7 @@ class Generator:
         extra_mutation: bool = False,
         extra_mutation_prob: float = 0.2,
         restrictions: list[Restriction] | None = None,
-        max_attempts: int = 10_000,
+        max_attempts: int = 10000,
     ) -> None:
 
         # Amino acid pool shared with all registered GenMethod instances.
@@ -367,3 +367,6 @@ class _StrAdapter:
     def __getitem__(self, index):
         return self.sequence[index]
 
+
+if __name__ == '__main__':
+    pass

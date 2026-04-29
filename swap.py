@@ -50,6 +50,7 @@ class Swap(GenMethod):
 
     This method does not require the amino acid pool.
     """
+    method_name = 'SWAP'
 
     def __init__(self) -> None:
         super().__init__()
@@ -59,7 +60,7 @@ class Swap(GenMethod):
         Returns the 3D helix positions for seq after aligning the
         hydrophobic moment vector to point toward -Y.
         """
-        positions = compute_helix_positions(seq)
+        positions = compute_helix_positions(seq, translate=True)
         hm_vector = compute_hm_vector(seq, positions)
         return align_to_minus_y(positions, hm_vector)
 
@@ -73,6 +74,10 @@ class Swap(GenMethod):
         return Sequence(str(seq))
 
     def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+        # Set ornamet for DEBUG
+        ornament = int((30 - len(self.method_name))/2)
+        logger.debug(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+
         s1 = str(seq1)
         s2 = str(seq2)
         length = len(s1)
@@ -92,7 +97,8 @@ class Swap(GenMethod):
         if random.random() < 0.5:
             parent_a, parent_b = parent_a, parent_b
 
-        logger.debug(f"Swap: receptor='{parent_a}' donor='{parent_b}'")
+        logger.debug(f"{parent_a} <- Parent 1")
+        logger.debug(f"{parent_b} <- Parent 2")
 
         # Compute aligned helix positions for both parents.
         pos_a = self._aligned_positions(parent_a)
@@ -105,9 +111,9 @@ class Swap(GenMethod):
         vacant_indices = list(range(fragment_start, fragment_start + fragment_len))
 
         logger.debug(
-            f"Swap: fragment [{fragment_start}:{fragment_start + fragment_len}] "
-            f"(length {fragment_len})"
+            f"Fragment length: {fragment_len}"
         )
+        logger.debug(f"{parent_a[:fragment_start]}{' ' * fragment_len}{parent_a[fragment_start + fragment_len:]} <- Receptor")
 
         # Seed the child from parent A. Non-vacant positions are final.
         child: list[str] = list(str(parent_a))
@@ -117,13 +123,13 @@ class Swap(GenMethod):
         donor_residues: list[str] = list(str(parent_b))
         donor_positions: list[np.ndarray] = list(pos_b)
 
-        for idx in vacant_indices:
+        for n, idx in enumerate(vacant_indices):
             if not donor_positions:
                 # All donor residues have been consumed. Retain the parent A
                 # residue at remaining vacant positions.
                 logger.debug(
-                    f"Swap: donor pool exhausted at index {idx}, "
-                    f"retaining parent A residue '{child[idx]}'."
+                    f"Parent 2 pool exhausted at index {idx}, "
+                    f"retaining parent 1 residue '{child[idx]}'."
                 )
                 continue
 
@@ -136,9 +142,9 @@ class Swap(GenMethod):
             ]
             closest = int(np.argmin(distances))
 
-            logger.debug(
-                f"Swap: index {idx} <- '{donor_residues[closest]}' "
-                f"from donor (distance {distances[closest]:.3f})"
+            logger.debug(f"{' ' * (fragment_start + n)}{donor_residues[closest]}"
+                         f"{' ' * (fragment_len-n-1)}"
+                         f"{' '*len(parent_a[fragment_start + fragment_len:])} <- Inserted"
             )
 
             child[idx] = donor_residues[closest]
@@ -148,9 +154,12 @@ class Swap(GenMethod):
             donor_positions.pop(closest)
 
         result = ''.join(child)
-        logger.debug(f"Swap: '{parent_a}' + '{parent_b}' -> '{result}'")
+        logger.debug(f"{result} <- Child")
+        logger.debug(f"{'-' * 30}")
         return result
 
     def __repr__(self) -> str:
         return "Swap()"
         
+if __name__ == '__main__':
+    pass

@@ -96,6 +96,9 @@ class FacesMix(GenMethod):
         return Sequence(str(seq))
 
     def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+        ornament = int((30 - len(self.method_name))/2)
+        logger.debug(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+
         s1 = str(seq1)
         s2 = str(seq2)
 
@@ -188,8 +191,12 @@ class FacesMix(GenMethod):
         logger.debug(
             f"FacesMix: '{parent_a}' + '{parent_b}' -> '{result}'"
         )
+        logger.debug(f"{'-' * 30}")
         return result
 
     def __repr__(self) -> str:
         return f"FacesMix(slice_angle={self.slice_angle})"
         
+
+if __name__ == '__main__':
+    pass

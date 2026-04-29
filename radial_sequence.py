@@ -104,8 +104,6 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
         end = segment_angle + start
         intervals.append(CircleInterval(start=start, end=end, lclosed=False, rclosed=True, tag=n))
 
-    print(len(intervals))
-    print(intervals)
     # Assign each core residue to the section
     # Find section by lambda function
     find_section = lambda a: [interval.tag for interval in intervals if interval(a)][0]
@@ -118,7 +116,7 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
     
     # Sort residues by section
     section_map.sort(key=lambda k: k[1])
-    print(section_map)
+    
     # Build the radial sequence from section I (index 0) to XVIII (index 17)
     radial = []
     for n in range(_N_SECTIONS):

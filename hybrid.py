@@ -32,8 +32,11 @@ class Hybrid(GenMethod):
     None. All shared resources are accessed through self.generator when
     needed. This method does not require the amino acid pool.
     """
+    method_name = 'HYBRID'
 
     def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+        ornament = int((30 - len(self.method_name))/2)
+        logger.debug(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
         s1 = str(seq1)
         s2 = str(seq2)
         len1 = len(s1)
@@ -50,14 +53,17 @@ class Hybrid(GenMethod):
         cut1 = max(1, min(round(fraction * len1), len1 - 1))
         cut2 = max(1, min(round(fraction * len2), len2 - 1))
 
-        child = s1[:cut1] + s2[cut2:]
+        child = s1[cut1:] + s2[:cut2]
 
-        logger.debug(
-            f"Hybrid: fraction={fraction:.3f} "
-            f"cut1={cut1}/{len1} cut2={cut2}/{len2} "
-            f"'{s1}' + '{s2}' -> '{child}'"
-        )
+        logger.debug(f"Fraction={fraction:.3f}")
+        logger.debug(f"{s1} <- Parent 1")
+        logger.debug(f"{s2} <- Parent 2")
+        logger.debug(f"{s1[cut1:]}{' '*len(s2[:cut2])}")
+        logger.debug(f"{' '*len(s1[cut1:])}{s2[:cut2]}")
+        logger.debug(f"{child} <- Child")
+        logger.debug(f"{'-' * 30}")
 
         return child
 
-    
+if __name__ == '__main__':
+    pass

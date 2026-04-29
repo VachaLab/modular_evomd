@@ -57,3 +57,5 @@ class GenMethod:
         return f"{self.__class__.__name__}()"
 
 
+if __name__ == '__main__':
+    pass
