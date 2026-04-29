@@ -10,7 +10,7 @@ from sequence import Sequence
 from sequence_geometry import (
     compute_helix_positions,
     compute_hm_vector,
-    align_to_minus_y,
+    align_to,
     get_faces,
 )
 
@@ -66,8 +66,9 @@ class FacesMix(GenMethod):
         Must be between 20 and 340. The slice is centered on the
         hydrophobic moment vector direction. Default is 180.
     """
+    method_name = 'FacesMix'
 
-    def __init__(self, slice_angle: float = 180.0) -> None:
+    def __init__(self, slice_angle: float = 120.0) -> None:
         super().__init__()
 
         if not _SLICE_ANGLE_MIN <= slice_angle <= _SLICE_ANGLE_MAX:
@@ -84,7 +85,7 @@ class FacesMix(GenMethod):
         """
         positions = compute_helix_positions(seq)
         hm_vector = compute_hm_vector(seq, positions)
-        return align_to_minus_y(positions, hm_vector)
+        return align_to(positions, hm_vector, target=np.array([1., 0.]))
 
     def _as_sequence(self, seq: Sequence | str) -> Sequence:
         """
@@ -127,9 +128,8 @@ class FacesMix(GenMethod):
         else:
             parent_a, parent_b = parent_b, parent_a
 
-        logger.debug(
-            f"FacesMix: base='{parent_a}' donor='{parent_b}'"
-        )
+        logger.debug(f"{parent_a} <- Parent 1")
+        logger.debug(f"{parent_b} <- Parent 2")
 
         # Compute aligned helix positions for both parents.
         pos_a = self._aligned_positions(parent_a)
@@ -137,16 +137,21 @@ class FacesMix(GenMethod):
 
         # Split parent A into hydrophobic and hydrophilic faces.
         hydrophobic_face, hydrophilic_face = get_faces(
-            pos_a, parent_a, self.slice_angle
+            pos_a, parent_a, self.slice_angle, ref_angle=0
         )
+
 
         # Randomly select which face of parent A will be replaced.
         if random.random() < 0.5:
             vacant_indices = hydrophobic_face
-            logger.debug("FacesMix: replacing hydrophobic face")
+            protoseq = [k.letter if k.index in hydrophilic_face else ' ' for k in parent_a.residues]
+            logger.debug("Replacing hydrophobic face")
         else:
             vacant_indices = hydrophilic_face
-            logger.debug("FacesMix: replacing hydrophilic face")
+            protoseq = [k.letter if k.index in hydrophobic_face else ' ' for k in parent_a.residues]
+            logger.debug("Replacing hydrophilic face")
+
+        logger.debug(f"{''.join(protoseq)} <- Base face")
 
         # Seed the child from parent A. Conserved positions are final.
         # Vacant positions will be overwritten from parent B.

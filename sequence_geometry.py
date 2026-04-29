@@ -95,6 +95,7 @@ def get_faces(
     positions: np.ndarray,
     seq: Sequence,
     phi_deg: float,
+    ref_angle: float = np.pi * 3/2
 ) -> tuple:
     """
     Splits residues into two faces based on their proximity to the hydrophobic
@@ -104,9 +105,17 @@ def get_faces(
     Returns (positive_face, negative_face) as lists of residue indices.
     Reusable by GenMethod subclasses that work with helix geometry.
     """
-    border = np.cos(np.deg2rad(phi_deg / 2))
-    positive_face = [res.index for res, pos in zip(seq.residues, positions) if -pos[1] >= border]
-    negative_face = [res.index for res, pos in zip(seq.residues, positions) if -pos[1] < border]
+    border = np.deg2rad(phi_deg / 2)
+    interval = CircleInterval(start=ref_angle-border, end=ref_angle+border, lclosed=False, rclosed=False)
+    positive_face = []
+    negative_face = []
+    for res, pos in zip(seq.residues, positions):
+        angle = np.mod(math.atan2(pos[1], pos[0]), 2*np.pi)
+        if interval(angle):
+            positive_face.append(res.index)
+        else:
+            negative_face.append(res.index)
+    
     return positive_face, negative_face
 
 

@@ -54,7 +54,7 @@ def set_colors(
         anchor = np.array([r.charge for r in seq.residues] + [1.0, -1.0])
         residue_values = np.array([r.charge for r in seq.residues])
     elif args.parameter == 'faces':
-        p_face, _ = get_faces(positions, seq, args.slice_angle)
+        p_face, _ = get_faces(positions, seq, args.slice_angle, ref_angle=np.pi * 3/2)
         anchor = np.array([1 if r.index in p_face else -1 for r in seq.residues])
         residue_values = anchor
     else:

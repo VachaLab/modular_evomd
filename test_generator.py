@@ -21,7 +21,7 @@ if __name__ == '__main__':
     seq1 = Sequence('GSRKTEREFDQNSQKYSRNFSG')
     seq2 = Sequence('YHTEANKNTRKMQRSTQKMRRY')
 
-    method = Swap()
+    method = FacesMix()
     gen = Generator(methods=method)
     
     new_seq = method.generate(seq1=seq1, seq2=seq2)
