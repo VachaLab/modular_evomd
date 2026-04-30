@@ -54,7 +54,8 @@ def compute_hm_scalar(seq: Sequence, positions: np.ndarray, average: bool = Fals
        hm += res.hydrophobicity * pos[:2]
     if average:
         hm /= len(seq.residues)
-    return float(np.linalg.norm(hm)) # / len(seq.residues)  # is it necesary to average hm?
+    hm = round(float(np.linalg.norm(hm)), 4)
+    return hm # / len(seq.residues)  # is it necesary to average hm?
 
 
 def align_to_minus_y(positions: np.ndarray, hm_vector: np.ndarray) -> np.ndarray:

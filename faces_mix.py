@@ -66,7 +66,8 @@ class FacesMix(GenMethod):
         Must be between 20 and 340. The slice is centered on the
         hydrophobic moment vector direction. Default is 180.
     """
-    method_name = 'FacesMix'
+    method_name: str = 'FacesMix'
+    expected_parents: int = 2
 
     def __init__(self, slice_angle: float = 120.0) -> None:
         super().__init__()
@@ -96,9 +97,9 @@ class FacesMix(GenMethod):
             return seq
         return Sequence(str(seq))
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
         ornament = int((30 - len(self.method_name))/2)
-        logger.debug(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
 
         s1 = str(seq1)
         s2 = str(seq2)
@@ -128,8 +129,8 @@ class FacesMix(GenMethod):
         else:
             parent_a, parent_b = parent_b, parent_a
 
-        logger.debug(f"{parent_a} <- Parent 1")
-        logger.debug(f"{parent_b} <- Parent 2")
+        logger.info(f"{parent_a} <- Parent 1")
+        logger.info(f"{parent_b} <- Parent 2")
 
         # Compute aligned helix positions for both parents.
         pos_a = self._aligned_positions(parent_a)
@@ -145,13 +146,17 @@ class FacesMix(GenMethod):
         if random.random() < 0.5:
             vacant_indices = hydrophobic_face
             protoseq = [k.letter if k.index in hydrophilic_face else ' ' for k in parent_a.residues]
-            logger.debug("Replacing hydrophobic face")
+            replacing_face = 'hydrophobic'
+            remaining_face = 'hydrophilic'
+            logger.info(f"Replacing {replacing_face} face")
         else:
             vacant_indices = hydrophilic_face
             protoseq = [k.letter if k.index in hydrophobic_face else ' ' for k in parent_a.residues]
-            logger.debug("Replacing hydrophilic face")
+            replacing_face = 'hydrophilic'
+            remaining_face = 'hydrophobic'
+            logger.info(f"Replacing {replacing_face} face")
 
-        logger.debug(f"{''.join(protoseq)} <- Base face")
+        logger.info(f"{''.join(protoseq)} <- {remaining_face} face")
 
         # Seed the child from parent A. Conserved positions are final.
         # Vacant positions will be overwritten from parent B.
@@ -162,12 +167,13 @@ class FacesMix(GenMethod):
         donor_residues: list[str] = list(str(parent_b))
         donor_positions: list[np.ndarray] = list(pos_b)
 
+        inserted = [' ' for k in protoseq]
         for idx in vacant_indices:
             if not donor_positions:
                 # All donor residues have been consumed. Keep the parent A
                 # residue at the remaining vacant positions.
-                logger.debug(
-                    f"FacesMix: donor pool exhausted at index {idx}, "
+                logger.info(
+                    f"Donor pool exhausted at index {idx}, "
                     f"retaining parent A residue '{child[idx]}'."
                 )
                 continue
@@ -181,22 +187,22 @@ class FacesMix(GenMethod):
             ]
             closest = int(np.argmin(distances))
 
-            logger.debug(
-                f"FacesMix: index {idx} <- '{donor_residues[closest]}' "
-                f"from donor (distance {distances[closest]:.3f})"
-            )
-
             child[idx] = donor_residues[closest]
+            inserted[idx] = donor_residues[closest]
 
             # Remove the consumed residue and position from the pools.
             donor_residues.pop(closest)
             donor_positions.pop(closest)
 
+        
+        logger.info(
+            f"{''.join(inserted)} <- Inserted"
+            )
         result = ''.join(child)
-        logger.debug(
-            f"FacesMix: '{parent_a}' + '{parent_b}' -> '{result}'"
+        logger.info(
+            f"{result} <- Child"
         )
-        logger.debug(f"{'-' * 30}")
+        logger.info(f"{'-' * 30}")
         return result
 
     def __repr__(self) -> str:

@@ -50,7 +50,8 @@ class Swap(GenMethod):
 
     This method does not require the amino acid pool.
     """
-    method_name = 'SWAP'
+    method_name: str = 'SWAP'
+    expected_parents: int = 2
 
     def __init__(self) -> None:
         super().__init__()
@@ -73,10 +74,10 @@ class Swap(GenMethod):
             return seq
         return Sequence(str(seq))
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
-        # Set ornamet for DEBUG
+    def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
+        # Set ornamet for info
         ornament = int((30 - len(self.method_name))/2)
-        logger.debug(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
 
         s1 = str(seq1)
         s2 = str(seq2)
@@ -97,8 +98,8 @@ class Swap(GenMethod):
         if random.random() < 0.5:
             parent_a, parent_b = parent_a, parent_b
 
-        logger.debug(f"{parent_a} <- Parent 1")
-        logger.debug(f"{parent_b} <- Parent 2")
+        logger.info(f"{parent_a} <- Parent 1")
+        logger.info(f"{parent_b} <- Parent 2")
 
         # Compute aligned helix positions for both parents.
         pos_a = self._aligned_positions(parent_a)
@@ -110,10 +111,8 @@ class Swap(GenMethod):
         fragment_start = random.randint(0, length - fragment_len)
         vacant_indices = list(range(fragment_start, fragment_start + fragment_len))
 
-        logger.debug(
-            f"Fragment length: {fragment_len}"
-        )
-        logger.debug(f"{parent_a[:fragment_start]}{' ' * fragment_len}{parent_a[fragment_start + fragment_len:]} <- Receptor")
+        logger.info(f"Fragment length: {fragment_len}")
+        logger.info(f"{parent_a[:fragment_start]}{' ' * fragment_len}{parent_a[fragment_start + fragment_len:]} <- Receptor")
 
         # Seed the child from parent A. Non-vacant positions are final.
         child: list[str] = list(str(parent_a))
@@ -123,11 +122,12 @@ class Swap(GenMethod):
         donor_residues: list[str] = list(str(parent_b))
         donor_positions: list[np.ndarray] = list(pos_b)
 
+        inserted = [' ' for k in child]
         for n, idx in enumerate(vacant_indices):
             if not donor_positions:
                 # All donor residues have been consumed. Retain the parent A
                 # residue at remaining vacant positions.
-                logger.debug(
+                logger.info(
                     f"Parent 2 pool exhausted at index {idx}, "
                     f"retaining parent 1 residue '{child[idx]}'."
                 )
@@ -142,20 +142,17 @@ class Swap(GenMethod):
             ]
             closest = int(np.argmin(distances))
 
-            logger.debug(f"{' ' * (fragment_start + n)}{donor_residues[closest]}"
-                         f"{' ' * (fragment_len-n-1)}"
-                         f"{' '*len(parent_a[fragment_start + fragment_len:])} <- Inserted"
-            )
-
             child[idx] = donor_residues[closest]
+            inserted[idx] = donor_residues[closest]
 
             # Remove the consumed residue and position from the pools.
             donor_residues.pop(closest)
             donor_positions.pop(closest)
 
+        logger.info(f"{''.join(inserted)} <- Inserted")
         result = ''.join(child)
-        logger.debug(f"{result} <- Child")
-        logger.debug(f"{'-' * 30}")
+        logger.info(f"{result} <- Child")
+        logger.info(f"{'-' * 30}")
         return result
 
     def __repr__(self) -> str:

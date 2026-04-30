@@ -52,8 +52,14 @@ class GroupMutation(GenMethod):
 
     seq2 is always ignored. This method only requires seq1.
     """
+    method_name: str = 'GroupMut'
+    expected_parents: int = 1
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence, seq2: Sequence = None, verbose=False) -> str:
+        # Set ornamet for info
+        ornament = int((30 - len(self.method_name))/2)
+        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+
         pool: str = self.generator.aa_pool
         seq_str: str = str(seq1)
         length: int = len(seq_str)
@@ -83,12 +89,15 @@ class GroupMutation(GenMethod):
             return seq_str
 
         new_aa: str = random.choice(candidates)
+        child = seq_str[:idx] + new_aa + seq_str[idx + 1:]
 
-        logger.debug(
-            f"GroupMutation: '{current_aa}' -> '{new_aa}' at position {idx}"
-        )
+        logger.info(f"{seq_str} <- Parent")
+        logger.info(f"{' ' * len(seq_str[:idx])}^{' ' * len(seq_str[idx + 1:])}")
+        logger.info(f"{' ' * len(seq_str[:idx])}{new_aa}{' ' * len(seq_str[idx + 1:])} <- Mutation")
+        logger.info(f"{child} <- Child")
 
-        return seq_str[:idx] + new_aa + seq_str[idx + 1:]
+        logger.info(f"{'-' * 30}")
+        return child
 
     def __repr__(self) -> str:
         return "GroupMutation()"
@@ -119,8 +128,14 @@ class HydrophobicityMutation(GenMethod):
 
     seq2 is always ignored. This method only requires seq1.
     """
+    method_name: str = 'HmMut'
+    expected_parents: int = 1
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
+        # Set ornamet for info
+        ornament = int((30 - len(self.method_name))/2)
+        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+
         pool: str = self.generator.aa_pool
         seq_str: str = str(seq1)
         length: int = len(seq_str)
@@ -160,7 +175,15 @@ class HydrophobicityMutation(GenMethod):
             f"at position {idx}"
         )
 
-        return seq_str[:idx] + new_aa + seq_str[idx + 1:]
+        child = seq_str[:idx] + new_aa + seq_str[idx + 1:]
+
+        logger.info(f"{seq_str} <- Parent")
+        logger.info(f"{' ' * len(seq_str[:idx])}^{' ' * len(seq_str[idx + 1:])}")
+        logger.info(f"{' ' * len(seq_str[:idx])}{new_aa}{' ' * len(seq_str[idx + 1:])} <- Mutation")
+        logger.info(f"{child} <- Child")
+
+        logger.info(f"{'-' * 30}")
+        return child
 
     def __repr__(self) -> str:
         return "HydrophobicityMutation()"

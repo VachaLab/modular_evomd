@@ -1,5 +1,6 @@
 # === restriction.py ===
 from __future__ import annotations
+from sequence import Sequence
 import logging
 import re
 from typing import Optional
@@ -43,75 +44,19 @@ class Restriction:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}()"
 
+    def _as_sequence(self, seq: Sequence | str) -> Sequence:
+        """
+        Returns a Sequence object. Instantiates one only when the input
+        is a plain string, avoiding redundant construction otherwise.
+        """
+        if isinstance(seq, Sequence):
+            return seq
+        return Sequence(str(seq))
+
 
 # ---------------------------------------------------------------------------
 # Built-in restrictions
 # ---------------------------------------------------------------------------
-
-class LengthRestriction(Restriction):
-    """
-    Accepts sequences whose length falls within a specified range.
-
-    Accepts either a fixed length or a min/max range. When a fixed length
-    is provided, only sequences of exactly that length are accepted.
-    When a range is provided, sequences whose length falls within
-    [min_len, max_len] (inclusive on both ends) are accepted.
-
-    Parameters
-    ----------
-    length : int | None
-        Fixed required length. When provided, min_len and max_len are
-        ignored.
-    min_len : int | None
-        Minimum accepted length (inclusive). Used only when length is None.
-    max_len : int | None
-        Maximum accepted length (inclusive). Used only when length is None.
-    """
-
-    def __init__(
-        self,
-        length: Optional[int] = None,
-        min_len: Optional[int] = None,
-        max_len: Optional[int] = None,
-    ) -> None:
-        super().__init__()
-
-        if length is not None:
-            # Fixed length mode: both min and max are set to the same value.
-            self._min: int = length
-            self._max: int = length
-        elif min_len is not None or max_len is not None:
-            # Range mode: either bound may be open-ended.
-            self._min = min_len if min_len is not None else 0
-            self._max = max_len if max_len is not None else int(1e9)
-        else:
-            raise ValueError(
-                "LengthRestriction requires either 'length' or at least one "
-                "of 'min_len' / 'max_len'."
-            )
-
-        if self._min > self._max:
-            raise ValueError(
-                f"LengthRestriction: min_len ({self._min}) must be <= "
-                f"max_len ({self._max})."
-            )
-
-    def test(self, seq: str) -> bool:
-        n = len(seq)
-        passed = self._min <= n <= self._max
-        if passed:
-            self.message = f"length {n} is within [{self._min}, {self._max}]"
-        else:
-            self.message = (
-                f"length {n} is outside [{self._min}, {self._max}]"
-            )
-        return passed
-
-    def __repr__(self) -> str:
-        if self._min == self._max:
-            return f"LengthRestriction(length={self._min})"
-        return f"LengthRestriction(min_len={self._min}, max_len={self._max})"
-
 
 class CompositionRestriction(Restriction):
     """
@@ -306,6 +251,144 @@ class ChargeRestriction(Restriction):
         return (
             f"ChargeRestriction(min_charge={self._min}, "
             f"max_charge={self._max})"
+        )
+
+        
+class HindexRestriction(Restriction):
+    """
+    Accepts sequences whose net charge falls within a specified range.
+
+    Hydrophobic index is computed as the sum of per-residue hydrophobic moments using the values
+    defined in Scales.hydrophobicity_scales["eisenberg"]. Residues not present in the scale are
+    treated as zero (0.0) and a warning is logged.
+
+    Parameters
+    ----------
+    min : float | None
+        Minimum accepted hydrophobic index (inclusive). None means no lower bound.
+    max : float | None
+        Maximum accepted hydrophobic index (inclusive). None means no upper bound.
+    """
+
+    def __init__(
+        self,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> None:
+        super().__init__()
+
+        if min is None and max is None:
+            raise ValueError(
+                "ChargeRestriction requires at least one of "
+                "'min' or 'max'."
+            )
+        self._min: Optional[float] = min
+        self._max: Optional[float] = max
+
+        if (
+            self._min is not None
+            and self._max is not None
+            and self._min > self._max
+        ):
+            raise ValueError(
+                f"HindexRestriction: min ({self._min}) must be "
+                f"<= max ({self._max})."
+            )
+
+        # Import here to avoid circular dependency at module level.
+        from scales import Scales
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+
+    def test(self, seq: str) -> bool:
+        hindex = 0.0
+        for aa in seq.upper():
+            if aa not in self._hi_table:
+                logger.warning(
+                    f"HindezRestriction: unrecognized residue '{aa}' treated as zero."
+                )
+            hindex += self._hi_table.get(aa, 0.0)
+
+        hindex = round(hindex, 4)
+        above_min = self._min is None or hindex >= self._min
+        below_max = self._max is None or hindex <= self._max
+
+        passed = above_min and below_max
+
+        bound_str = f"[{self._min}, {self._max}]"
+        logger.info(f"Hi restriction: {bound_str} Current: {hindex} = Pass: {passed}")
+        
+        return passed
+
+    def __repr__(self) -> str:
+        return (
+            f"HindexRestriction(min={self._min}, "
+            f"max={self._max})"
+        )
+
+        
+class HmomentRestriction(Restriction):
+    """
+    Accepts sequences whose hydrophobic moment falls within a specified range.
+
+    Hydrophobic moment is computed as described in Faraday Symp. Chem. Soc., 1982, 17,109-120.
+
+    Parameters
+    ----------
+    min : float | None
+        Minimum accepted hydrophobic index (inclusive). None means no lower bound.
+    max : float | None
+        Maximum accepted hydrophobic index (inclusive). None means no upper bound.
+    """
+
+    def __init__(
+        self,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> None:
+        super().__init__()
+
+        if min is None and max is None:
+            raise ValueError(
+                "ChargeRestriction requires at least one of "
+                "'min' or 'max'."
+            )
+        self._min: Optional[float] = min
+        self._max: Optional[float] = max
+
+        if (
+            self._min is not None
+            and self._max is not None
+            and self._min > self._max
+        ):
+            raise ValueError(
+                f"ChargeRestriction: min ({self._min}) must be "
+                f"<= max ({self._max})."
+            )
+
+        # Import here to avoid circular dependency at module level.
+        from scales import Scales
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+
+    def test(self, seq: str) -> bool:
+        from sequence_geometry import compute_helix_positions, compute_hm_scalar
+        seq = self._as_sequence(seq)
+        
+        positions = compute_helix_positions(seq, translate=False)
+        hm_scalar = compute_hm_scalar(seq, positions)
+
+        above_min = self._min is None or hm_scalar >= self._min
+        below_max = self._max is None or hm_scalar <= self._max
+
+        passed = above_min and below_max
+        bound_str = f"[{self._min}, {self._max}]"
+        logger.info(f"Hm restriction: {bound_str} Current: {hm_scalar} = Pass: {passed}")
+
+        return passed
+
+    def __repr__(self) -> str:
+        return (
+            f"HmomentRestriction(min={self._min}, "
+            f"max={self._max})"
         )
 
         

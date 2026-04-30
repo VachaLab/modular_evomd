@@ -29,6 +29,8 @@ class GenMethod:
     seq.charge). Subclasses that only need the sequence string should use
     str(seq) to avoid unnecessary object construction overhead.
     """
+    method_name: str = 'EmptyMethod'
+    expected_parents: int = 0
 
     def __init__(self) -> None:
         # Reference to the Generator that owns this method.

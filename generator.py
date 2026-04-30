@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Optional
 from genmethod import GenMethod
 from scales import Scales
 
-if TYPE_CHECKING:
-    from sequence import Sequence
-    from restriction import Restriction
+
+from sequence import Sequence
+from restriction import Restriction
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +26,29 @@ class _RandomInitial(GenMethod):
     residues uniformly at random from the Generator amino acid pool.
     The target length is resolved from Generator.peptide_len on each call.
     """
+    method_name = 'RANDOM'
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence = None, seq2: Sequence = None, verbose=False) -> str:
         pool = self.generator.aa_pool
         length = self.generator.peptide_len
 
         # Resolve target length from the generator configuration.
-        if isinstance(length, tuple):
+        if isinstance(length, (tuple, list)):
+            logger.debug(f"length: {length}")
             length = random.randint(length[0], length[1])
         if length is None:
             raise ValueError(
                 "_RandomInitial requires Generator.peptide_len to be set."
             )
 
-        return ''.join(random.choices(pool, k=length))
+        child = ''.join(random.choices(pool, k=length))
+        if verbose:
+            ornament = int((30 - len(self.method_name))/2)
+            print(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+            print(f"Random sequence of length {length}")
+            print(f"{child} <- Child")
+            print(f"{'-' * 30}")
+        return child
 
 
 class _RandomMutation(GenMethod):
@@ -54,8 +63,9 @@ class _RandomMutation(GenMethod):
     Always mutates exactly one position. Never rebuilds the sequence
     from scratch.
     """
+    method_name = 'RAND_MUT'
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence, seq2: Sequence = None, verbose=False) -> str:
         pool = self.generator.aa_pool
         seq_str = str(seq1)
         length = len(seq_str)
@@ -65,7 +75,18 @@ class _RandomMutation(GenMethod):
 
         # Replace exactly one randomly chosen position.
         idx = random.randint(0, length - 1)
-        return seq_str[:idx] + random.choice(pool) + seq_str[idx + 1:]
+        new_aa = random.choice(pool)
+        child = seq_str[:idx] + new_aa + seq_str[idx + 1:]
+
+        if verbose:
+            ornament = int((30 - len(self.method_name))/2)
+            print(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+            print(f"{seq_str} <- Parent")
+            print(f"{' ' * len(seq_str[:idx])}^{' ' * len(seq_str[idx + 1:])}")
+            print(f"{' ' * len(seq_str[:idx])}{new_aa}{' ' * len(seq_str[idx + 1:])} <- Mutation")
+            print(f"{child} <- Child")
+            print(f"{'-' * 30}")
+        return seq_str[:idx] + new_aa + seq_str[idx + 1:]
 
 
 class Generator:
@@ -90,9 +111,6 @@ class Generator:
     weights : list[float] | None
         Selection weights for each method in methods. Must match the length
         of methods. All weights default to 1.0 (uniform selection).
-    initial_method : GenMethod | None
-        Method used exclusively for the first population. Defaults to
-        _RandomInitial when not provided.
     aa_pool : str | None
         String of single-letter amino acid codes available for generation.
         Defaults to all 20 standard proteinogenic amino acids.
@@ -118,7 +136,6 @@ class Generator:
         self,
         methods: list[GenMethod] | GenMethod | None = None,
         weights: list[float] | None = None,
-        initial_method: GenMethod | None = None,
         aa_pool: str | None = None,
         peptide_len: int | tuple[int, int] | None = None,
         extra_mutation: bool = False,
@@ -150,10 +167,8 @@ class Generator:
             )
         self.weights: list[float] = weights
 
-        # Method used for the first population only.
-        self.initial_method: GenMethod = (
-            initial_method if initial_method is not None else _RandomInitial()
-        )
+        # Built-in fallback used when generate() is called without parents.
+        self._initial_fallback: _RandomInitial = _RandomInitial()
 
         # Extra mutation configuration.
         self.extra_mutation: bool = extra_mutation
@@ -165,13 +180,18 @@ class Generator:
         self._point_mutator: _RandomMutation = _RandomMutation()
 
         # Sequence validity restrictions evaluated inside the generation loop.
-        self.restrictions: list[Restriction] = restrictions if restrictions is not None else []
+        print('****', restrictions)
+        if restrictions is None:
+            restrictions = []
+        elif isinstance(restrictions, Restriction):
+            restrictions = [restrictions]
+        self.restrictions: list[Restriction] = restrictions
 
         # Maximum loop iterations before raising an error.
         self.max_attempts: int = max_attempts
 
         # Inject generator reference into all registered methods.
-        self._register_method(self.initial_method)
+        self._register_method(self._initial_fallback)
         for method in self.methods:
             self._register_method(method)
         self._register_method(self._point_mutator)
@@ -257,22 +277,35 @@ class Generator:
             return mutated
         return seq
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence = None, seq2: Sequence = None, verbose=False) -> str:
         """
-        Produces a valid candidate sequence string from two parent Sequence
-        objects.
+        Produces a valid candidate sequence string.
 
-        Selects a GenMethod on each attempt, applies optional extra mutation,
-        and validates against all registered Restriction instances. Loops
-        until a valid candidate is found or max_attempts is exceeded.
+        Behavior depends on the parents provided:
+
+        - If no parents are given (both seq1 and seq2 are None), the candidate
+        is built from scratch using the built-in _RandomInitial method,
+        regardless of the methods registered in self.methods.
+        - If at least one parent is given, a method is selected from
+        self.methods according to self.weights. Methods whose
+        expected_parents requirement cannot be satisfied with the available
+        parents are filtered out before selection.
+
+        Optional extra mutation is applied afterwards, except when the chosen
+        method does not consume any parent (i.e. it built the sequence from
+        scratch), in which case the mutation would be redundant.
+
+        The candidate is validated against all registered Restriction
+        instances. The loop runs until a valid candidate is found or
+        max_attempts is exceeded.
 
         Parameters
         ----------
-        seq1 : Sequence
-            First parent, always provided by Evolver.
-        seq2 : Sequence
-            Second parent, always provided by Evolver. May be the same
-            object as seq1 when the population has only one individual.
+        seq1 : Sequence, optional
+            First parent. None signals an initial-population call.
+        seq2 : Sequence, optional
+            Second parent. May be None or equal to seq1 when only one
+            individual is available.
 
         Returns
         -------
@@ -284,17 +317,56 @@ class Generator:
         RuntimeError
             When no valid sequence is found within max_attempts iterations.
         """
-        for attempt in range(1, self.max_attempts + 1):
-            # Method selection is inside the loop so that diverse methods
-            # are tried when restrictions are strict.
-            method = self._select_method()
-            logger.debug(
-                f"Generator: attempt {attempt}, method {method}"
+        # No parents -> always build from scratch with the random initial method.
+        no_parents = seq1 is None and seq2 is None
+
+        if no_parents:
+            # _RandomInitial ignores both parents, so passing None is safe.
+            for attempt in range(1, self.max_attempts + 1):
+                candidate = self._initial_fallback.generate(None, None, verbose=verbose)
+
+                # Note: extra mutation is skipped here because the sequence was
+                # just built from scratch; mutating it adds no diversity beyond
+                # what _RandomInitial already provides.
+
+                if self._passes_restrictions(candidate):
+                    logger.debug(
+                        f"Generator: valid initial sequence found after "
+                        f"{attempt} attempt(s): '{candidate}'"
+                    )
+                    return candidate
+
+            raise RuntimeError(
+                f"Generator: could not produce a valid initial sequence after "
+                f"{self.max_attempts} attempts. Check that restrictions are not "
+                f"too strict for the amino acid pool."
             )
 
-            candidate = method.generate(seq1, seq2)
+        # At least one parent -> use the configured methods with weighted choice.
+        # Determine how many parents are actually available.
+        available_parents = sum(p is not None for p in (seq1, seq2))
 
-            if self.extra_mutation:
+        # Filter methods whose expected_parents requirement is satisfiable.
+        eligible: list[tuple[GenMethod, float]] = [
+            (m, w) for m, w in zip(self.methods, self.weights)
+            if getattr(m, 'expected_parents', 2) <= available_parents
+        ]
+        if not eligible:
+            raise RuntimeError(
+                f"Generator: no registered method can run with "
+                f"{available_parents} parent(s) available."
+            )
+        eligible_methods, eligible_weights = zip(*eligible)
+
+        for attempt in range(1, self.max_attempts + 1):
+            method = random.choices(eligible_methods, weights=eligible_weights, k=1)[0]
+            logger.debug(f"Generator: attempt {attempt}, method {method}")
+
+            candidate = method.generate(seq1, seq2, verbose=verbose)
+
+            # Skip extra mutation when the method consumes no parents,
+            # mirroring the previous behaviour of generate_initial.
+            if self.extra_mutation and getattr(method, 'expected_parents', 2) > 0:
                 candidate = self._apply_extra_mutation(candidate)
 
             if self._passes_restrictions(candidate):
@@ -309,31 +381,7 @@ class Generator:
             f"too strict for the configured methods and amino acid pool."
         )
 
-    def generate_initial(self, seq1: Sequence, seq2: Sequence) -> str:
-        """
-        Produces a valid candidate sequence string using the initial method.
-
-        Used by Evolver exclusively during the first population fill.
-        Follows the same validation loop as generate().
-        """
-        for attempt in range(1, self.max_attempts + 1):
-            candidate = self.initial_method.generate(seq1, seq2)
-
-            if self.extra_mutation:
-                candidate = self._apply_extra_mutation(candidate)
-
-            if self._passes_restrictions(candidate):
-                logger.debug(
-                    f"Generator: initial sequence found after {attempt} attempt(s): '{candidate}'"
-                )
-                return candidate
-
-        raise RuntimeError(
-            f"Generator: could not produce a valid initial sequence after "
-            f"{self.max_attempts} attempts. Check that restrictions are not "
-            f"too strict for the initial method and amino acid pool."
-        )
-
+    
     def __repr__(self) -> str:
         return (
             f"Generator(methods={self.methods}, weights={self.weights}, "
