@@ -237,13 +237,13 @@ class Generator:
 
     # Validation ------------------------------------------------------------
 
-    def _passes_restrictions(self, seq: str) -> bool:
+    def _passes_restrictions(self, seq: str, verbose=False) -> bool:
         """
         Returns True when seq satisfies all registered Restriction instances.
         Logs the failure reason at DEBUG level when a restriction is not met.
         """
         for restriction in self.restrictions:
-            if not restriction.test(seq):
+            if not restriction.test(seq, verbose=verbose):
                 logger.debug(
                     f"Generator: sequence '{seq}' rejected by "
                     f"{restriction.__class__.__name__}: {restriction.message}"
@@ -257,7 +257,7 @@ class Generator:
         """Selects one GenMethod from self.methods according to self.weights."""
         return random.choices(self.methods, weights=self.weights, k=1)[0]
 
-    def _apply_extra_mutation(self, seq: str) -> str:
+    def _apply_extra_mutation(self, seq: str, verbose=False) -> str:
         """
         Applies a single-position random mutation with probability
         extra_mutation_prob. Returns the sequence unchanged if the
@@ -270,6 +270,7 @@ class Generator:
             mutated = self._point_mutator.generate(
                 _StrAdapter(seq),
                 _StrAdapter(seq),
+                verbose=verbose
             )
             logger.debug(
                 f"Generator: extra mutation applied: '{seq}' -> '{mutated}'"
@@ -329,7 +330,7 @@ class Generator:
                 # just built from scratch; mutating it adds no diversity beyond
                 # what _RandomInitial already provides.
 
-                if self._passes_restrictions(candidate):
+                if self._passes_restrictions(candidate, verbose=verbose):
                     logger.debug(
                         f"Generator: valid initial sequence found after "
                         f"{attempt} attempt(s): '{candidate}'"
@@ -367,9 +368,9 @@ class Generator:
             # Skip extra mutation when the method consumes no parents,
             # mirroring the previous behaviour of generate_initial.
             if self.extra_mutation and getattr(method, 'expected_parents', 2) > 0:
-                candidate = self._apply_extra_mutation(candidate)
+                candidate = self._apply_extra_mutation(candidate, verbose=verbose)
 
-            if self._passes_restrictions(candidate):
+            if self._passes_restrictions(candidate, verbose=verbose):
                 logger.debug(
                     f"Generator: valid sequence found after {attempt} attempt(s): '{candidate}'"
                 )

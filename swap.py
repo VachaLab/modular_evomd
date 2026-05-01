@@ -75,9 +75,10 @@ class Swap(GenMethod):
         return Sequence(str(seq))
 
     def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
-        # Set ornamet for info
-        ornament = int((30 - len(self.method_name))/2)
-        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+        if verbose:
+            # Set ornamet for info
+            ornament = int((30 - len(self.method_name))/2)
+            print(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
 
         s1 = str(seq1)
         s2 = str(seq2)
@@ -98,8 +99,9 @@ class Swap(GenMethod):
         if random.random() < 0.5:
             parent_a, parent_b = parent_a, parent_b
 
-        logger.info(f"{parent_a} <- Parent 1")
-        logger.info(f"{parent_b} <- Parent 2")
+        if verbose:
+            print(f"{parent_a} <- Parent 1")
+            print(f"{parent_b} <- Parent 2")
 
         # Compute aligned helix positions for both parents.
         pos_a = self._aligned_positions(parent_a)
@@ -111,8 +113,9 @@ class Swap(GenMethod):
         fragment_start = random.randint(0, length - fragment_len)
         vacant_indices = list(range(fragment_start, fragment_start + fragment_len))
 
-        logger.info(f"Fragment length: {fragment_len}")
-        logger.info(f"{parent_a[:fragment_start]}{' ' * fragment_len}{parent_a[fragment_start + fragment_len:]} <- Receptor")
+        if verbose:
+            print(f"Fragment length: {fragment_len}")
+            print(f"{parent_a[:fragment_start]}{' ' * fragment_len}{parent_a[fragment_start + fragment_len:]} <- Receptor")
 
         # Seed the child from parent A. Non-vacant positions are final.
         child: list[str] = list(str(parent_a))
@@ -127,7 +130,7 @@ class Swap(GenMethod):
             if not donor_positions:
                 # All donor residues have been consumed. Retain the parent A
                 # residue at remaining vacant positions.
-                logger.info(
+                logger.warning(
                     f"Parent 2 pool exhausted at index {idx}, "
                     f"retaining parent 1 residue '{child[idx]}'."
                 )
@@ -149,10 +152,13 @@ class Swap(GenMethod):
             donor_residues.pop(closest)
             donor_positions.pop(closest)
 
-        logger.info(f"{''.join(inserted)} <- Inserted")
         result = ''.join(child)
-        logger.info(f"{result} <- Child")
-        logger.info(f"{'-' * 30}")
+
+        if verbose:
+            print(f"{''.join(inserted)} <- Inserted")
+            print(f"{result} <- Child")
+            print(f"{'-' * 30}")
+
         return result
 
     def __repr__(self) -> str:

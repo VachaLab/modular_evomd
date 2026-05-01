@@ -36,8 +36,6 @@ class Hybrid(GenMethod):
     expected_parents: int = 2
 
     def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
-        ornament = int((30 - len(self.method_name))/2)
-        logger.info(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
         s1 = str(seq1)
         s2 = str(seq2)
         len1 = len(s1)
@@ -56,13 +54,16 @@ class Hybrid(GenMethod):
 
         child = s1[:cut1] + s2[cut2:]
 
-        logger.info(f"Fraction={fraction:.3f}")
-        logger.info(f"{s1} <- Parent 1")
-        logger.info(f"{s2} <- Parent 2")
-        logger.info(f"{s1[:cut1]}{' '*len(s2[cut2:])}")
-        logger.info(f"{' '*len(s1[:cut1])}{s2[cut2:]}")
-        logger.info(f"{child} <- Child")
-        logger.info(f"{'-' * 30}")
+        if verbose:
+            ornament = int((30 - len(self.method_name))/2)
+            print(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+            print(f"Fraction={fraction:.3f}")
+            print(f"{s1} <- Parent 1")
+            print(f"{s2} <- Parent 2")
+            print(f"{s1[:cut1]}{' '*len(s2[cut2:])}")
+            print(f"{' '*len(s1[:cut1])}{s2[cut2:]}")
+            print(f"{child} <- Child")
+            print(f"{'-' * 30}")
 
         return child
 

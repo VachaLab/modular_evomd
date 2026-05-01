@@ -30,7 +30,7 @@ class GenMethod:
     str(seq) to avoid unnecessary object construction overhead.
     """
     method_name: str = 'EmptyMethod'
-    expected_parents: int = 0
+    expected_parents: int = 2
 
     def __init__(self) -> None:
         # Reference to the Generator that owns this method.
@@ -38,7 +38,7 @@ class GenMethod:
         # Provides access to aa_pool, peptide_len, and other shared state.
         self.generator: Generator | None = None
 
-    def generate(self, seq1: Sequence, seq2: Sequence) -> str:
+    def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
         """
         Produces a candidate sequence string from two parent Sequence objects.
 

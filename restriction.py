@@ -28,7 +28,7 @@ class Restriction:
         # callers to log acceptance reasons if needed.
         self.message: str = ''
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         """
         Evaluates whether seq satisfies this restriction.
 
@@ -95,7 +95,7 @@ class CompositionRestriction(Restriction):
                 f"<= max_count ({self._max})."
             )
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         count = sum(1 for aa in seq.upper() if aa in self._residues)
         above_min = count >= self._min
         below_max = self._max is None or count <= self._max
@@ -192,26 +192,26 @@ class ChargeRestriction(Restriction):
 
     Parameters
     ----------
-    min_charge : float | None
+    min : float | None
         Minimum accepted net charge (inclusive). None means no lower bound.
-    max_charge : float | None
+    max : float | None
         Maximum accepted net charge (inclusive). None means no upper bound.
     """
 
     def __init__(
         self,
-        min_charge: Optional[float] = None,
-        max_charge: Optional[float] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
     ) -> None:
         super().__init__()
 
-        if min_charge is None and max_charge is None:
+        if min is None and max is None:
             raise ValueError(
                 "ChargeRestriction requires at least one of "
-                "'min_charge' or 'max_charge'."
+                "'min' or 'max'."
             )
-        self._min: Optional[float] = min_charge
-        self._max: Optional[float] = max_charge
+        self._min: Optional[float] = min
+        self._max: Optional[float] = max
 
         if (
             self._min is not None
@@ -219,15 +219,15 @@ class ChargeRestriction(Restriction):
             and self._min > self._max
         ):
             raise ValueError(
-                f"ChargeRestriction: min_charge ({self._min}) must be "
-                f"<= max_charge ({self._max})."
+                f"ChargeRestriction: min ({self._min}) must be "
+                f"<= max ({self._max})."
             )
 
         # Import here to avoid circular dependency at module level.
         from scales import Scales
         self._charge_table: dict[str, float] = Scales.aa_charges
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         charge = 0.0
         for aa in seq.upper():
             if aa not in self._charge_table:
@@ -299,7 +299,7 @@ class HindexRestriction(Restriction):
         from scales import Scales
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         hindex = 0.0
         for aa in seq.upper():
             if aa not in self._hi_table:
@@ -314,8 +314,9 @@ class HindexRestriction(Restriction):
 
         passed = above_min and below_max
 
-        bound_str = f"[{self._min}, {self._max}]"
-        logger.info(f"Hi restriction: {bound_str} Current: {hindex} = Pass: {passed}")
+        if verbose:
+            bound_str = f"[{self._min}, {self._max}]"
+            print(f"Hi restriction: {bound_str} Current: {hindex} = Pass: {passed}")
         
         return passed
 
@@ -369,7 +370,7 @@ class HmomentRestriction(Restriction):
         from scales import Scales
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         from sequence_geometry import compute_helix_positions, compute_hm_scalar
         seq = self._as_sequence(seq)
         
@@ -380,8 +381,10 @@ class HmomentRestriction(Restriction):
         below_max = self._max is None or hm_scalar <= self._max
 
         passed = above_min and below_max
-        bound_str = f"[{self._min}, {self._max}]"
-        logger.info(f"Hm restriction: {bound_str} Current: {hm_scalar} = Pass: {passed}")
+
+        if verbose:
+            bound_str = f"[{self._min}, {self._max}]"
+            print(f"Hm restriction: {bound_str} Current: {hm_scalar} = Pass: {passed}")
 
         return passed
 
