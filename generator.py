@@ -177,7 +177,7 @@ class Generator:
         self._point_mutator: _RandomMutation = _RandomMutation()
 
         # Sequence validity restrictions evaluated inside the generation loop.
-        print('****', restrictions)
+        # print('****', restrictions)
         if restrictions is None:
             restrictions = []
         elif isinstance(restrictions, Restriction):

@@ -25,18 +25,18 @@ if __name__ == '__main__':
     method1 = Swap()
     method2 = FacesMix()
     method3 = Hybrid()
-    restriction1 = HindexRestriction(min=None, max=-7)
-    restriction2 = HmomentRestriction(min=5.5, max=None)
-    restriction3 = ChargeRestriction(min=0, max=7)
+    restriction1 = HindexRestriction(min=None, max=-0.3)
+    restriction2 = HmomentRestriction(min=0.25, max=None)
+    restriction3 = ChargeRestriction(min=-5, max=7)
     rest_list = [restriction2, restriction1, restriction3]
-    gen = Generator(methods=[method1, method2, method3], peptide_len=30, extra_mutation=True, extra_mutation_prob=1, restrictions=rest_list)
+    gen = Generator(methods=[method1, method2, method3], peptide_len=12, extra_mutation=True, extra_mutation_prob=1, restrictions=rest_list)
 
     seq1 = gen.generate(verbose=True)
-    seq2 = gen.generate(verbose=True)
-    seq3 = gen.generate(seq1=seq1, seq2=seq2, verbose=True)
+    # seq2 = gen.generate(verbose=True)
+    # seq3 = gen.generate(seq1=seq1, seq2=seq2, verbose=True)
 
-    plot_sequence(seq3, print_hm=True, show_sections=True, noshow=True)
+    # plot_sequence(seq3, print_hm=True, show_sections=True, noshow=True)
 
-    print(seq1)
-    print(seq2)
-    print(seq3)
+    # print(seq1)
+    # print(seq2)
+    # print(seq3)

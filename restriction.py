@@ -307,6 +307,7 @@ class HindexRestriction(Restriction):
                     f"HindezRestriction: unrecognized residue '{aa}' treated as zero."
                 )
             hindex += self._hi_table.get(aa, 0.0)
+        hindex /= len(seq)
 
         hindex = round(hindex, 4)
         above_min = self._min is None or hindex >= self._min

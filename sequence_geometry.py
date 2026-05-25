@@ -44,7 +44,7 @@ def compute_hm_vector(seq: Sequence, positions: np.ndarray) -> np.ndarray:
     return hm / norm
 
 
-def compute_hm_scalar(seq: Sequence, positions: np.ndarray, average: bool = False) -> float:
+def compute_hm_scalar(seq: Sequence, positions: np.ndarray, average: bool = True) -> float:
     """
     Computes the hydrophobic moment scalar magnitude before alignment.
     Must be called before align_to_minus_y() to preserve the original vector.
