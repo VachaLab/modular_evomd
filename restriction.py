@@ -240,11 +240,11 @@ class ChargeRestriction(Restriction):
         below_max = self._max is None or charge <= self._max
 
         passed = above_min and below_max
-        bound_str = f"[{self._min}, {self._max}]"
-        if passed:
-            self.message = f"charge {charge} is within {bound_str}"
-        else:
-            self.message = f"charge {charge} is outside {bound_str}"
+
+        if verbose:
+            bound_str = f"[{self._min}, {self._max}]"
+            print(f"Charge restriction: {bound_str} Current: {charge} = Pass: {passed}")
+
         return passed
 
     def __repr__(self) -> str:

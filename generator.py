@@ -127,9 +127,6 @@ class Generator:
     restrictions : list[Restriction] | None
         Sequence validity constraints tested inside the generation loop.
         A candidate is accepted only when all restrictions pass.
-    max_attempts : int
-        Maximum number of generation attempts per call before raising
-        a RuntimeError. Prevents infinite loops under very strict restrictions.
     """
 
     def __init__(
@@ -141,7 +138,7 @@ class Generator:
         extra_mutation: bool = False,
         extra_mutation_prob: float = 0.2,
         restrictions: list[Restriction] | None = None,
-        max_attempts: int = 10000,
+        
     ) -> None:
 
         # Amino acid pool shared with all registered GenMethod instances.
@@ -186,9 +183,6 @@ class Generator:
         elif isinstance(restrictions, Restriction):
             restrictions = [restrictions]
         self.restrictions: list[Restriction] = restrictions
-
-        # Maximum loop iterations before raising an error.
-        self.max_attempts: int = max_attempts
 
         # Inject generator reference into all registered methods.
         self._register_method(self._initial_fallback)
@@ -278,7 +272,7 @@ class Generator:
             return mutated
         return seq
 
-    def generate(self, seq1: Sequence = None, seq2: Sequence = None, verbose=False) -> str:
+    def generate(self, seq1: Sequence = None, seq2: Sequence = None, max_attempts: int = 10000, verbose=False) -> str:
         """
         Produces a valid candidate sequence string.
 
@@ -322,8 +316,9 @@ class Generator:
         no_parents = seq1 is None and seq2 is None
 
         if no_parents:
+            logger.debug("Generator.generate() No parents received.")
             # _RandomInitial ignores both parents, so passing None is safe.
-            for attempt in range(1, self.max_attempts + 1):
+            for attempt in range(1, max_attempts + 1):
                 candidate = self._initial_fallback.generate(None, None, verbose=verbose)
 
                 # Note: extra mutation is skipped here because the sequence was
@@ -335,11 +330,13 @@ class Generator:
                         f"Generator: valid initial sequence found after "
                         f"{attempt} attempt(s): '{candidate}'"
                     )
+                    if verbose:
+                        print(f"New sequence from method {self._initial_fallback.method_name}: {candidate}")
                     return candidate
 
             raise RuntimeError(
                 f"Generator: could not produce a valid initial sequence after "
-                f"{self.max_attempts} attempts. Check that restrictions are not "
+                f"{max_attempts} attempts. Check that restrictions are not "
                 f"too strict for the amino acid pool."
             )
 
@@ -359,7 +356,7 @@ class Generator:
             )
         eligible_methods, eligible_weights = zip(*eligible)
 
-        for attempt in range(1, self.max_attempts + 1):
+        for attempt in range(1, max_attempts + 1):
             method = random.choices(eligible_methods, weights=eligible_weights, k=1)[0]
             logger.debug(f"Generator: attempt {attempt}, method {method}")
 
@@ -374,11 +371,13 @@ class Generator:
                 logger.debug(
                     f"Generator: valid sequence found after {attempt} attempt(s): '{candidate}'"
                 )
+                if verbose:
+                    print(f"New sequence from method {method.method_name}: {candidate}")
                 return candidate
 
         raise RuntimeError(
             f"Generator: could not produce a valid sequence after "
-            f"{self.max_attempts} attempts. Check that restrictions are not "
+            f"{max_attempts} attempts. Check that restrictions are not "
             f"too strict for the configured methods and amino acid pool."
         )
 

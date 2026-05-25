@@ -329,7 +329,8 @@ def _run_pipeline(args: argparse.Namespace) -> None:
     if args.save:
         plt.savefig(args.out, dpi=300)
 
-    plt.show()
+    if not args.noshow:
+        plt.show()
 
 
 # --- Public API for notebook / import usage --------------------------------
@@ -350,6 +351,7 @@ def plot_sequence(
     remove_background: bool = False,
     save: bool = False,
     out: str = 'output.png',
+    noshow: bool = False,
 ) -> None:
     """
     Visualizes a peptide as an alpha-helix projection.
@@ -390,6 +392,7 @@ def plot_sequence(
         remove_background=remove_background,
         save=save,
         out=out,
+        noshow=noshow,
     )
     _validate_args(args, parser=None)
     _run_pipeline(args)
@@ -483,6 +486,11 @@ def get_arguments() -> argparse.Namespace:
         help='Number of angular sections. Only valid with --show-sections. Default: 18.',
         default=18,
         type=int,
+    )
+    parser.add_argument(
+        '-nogui', '--noshow',
+        help="Do not show plot. Use it together with --save",
+        action='store_true'
     )
 
     args = parser.parse_args()

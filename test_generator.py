@@ -5,7 +5,7 @@ from faces_mix import FacesMix
 from directed_mutations import GroupMutation, HydrophobicityMutation
 from sequence import Sequence
 import random
-from restriction import HmomentRestriction, HindexRestriction
+from restriction import HmomentRestriction, HindexRestriction, ChargeRestriction
 from peptide_viewer import plot_sequence
 
 #--------------------------------------------
@@ -24,16 +24,18 @@ if __name__ == '__main__':
 
     method1 = Swap()
     method2 = FacesMix()
+    method3 = Hybrid()
     restriction1 = HindexRestriction(min=None, max=-7)
     restriction2 = HmomentRestriction(min=5.5, max=None)
-    rest_list = [restriction2, restriction1, ]
-    gen = Generator(methods=[method1, method2], peptide_len=20, extra_mutation=True, extra_mutation_prob=1, restrictions=rest_list)
+    restriction3 = ChargeRestriction(min=0, max=7)
+    rest_list = [restriction2, restriction1, restriction3]
+    gen = Generator(methods=[method1, method2, method3], peptide_len=30, extra_mutation=True, extra_mutation_prob=1, restrictions=rest_list)
 
     seq1 = gen.generate(verbose=True)
     seq2 = gen.generate(verbose=True)
     seq3 = gen.generate(seq1=seq1, seq2=seq2, verbose=True)
 
-    # plot_sequence(seq3, print_hm=True, show_sections=True)
+    plot_sequence(seq3, print_hm=True, show_sections=True, noshow=True)
 
     print(seq1)
     print(seq2)
