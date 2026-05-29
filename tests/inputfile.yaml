@@ -1,0 +1,66 @@
+optimize: maximize
+populate_method: swap
+mixture_options: [
+  faces,
+  mutations,
+  swap,
+  hybrids,
+]
+mixture_weights: [
+  1,    
+  1,       
+  1,
+  1,
+]
+populate_weighted: False
+extra_mutation: True
+also_mutate_probability: 0.1    # random mutation: 10% of the generated sequences
+
+include_discarded: False
+
+first_fill: random
+check_validity: False
+face_reference: negative
+face_slice_angle: 120
+maximum_swap_ratio: 0.25   # max swap: 5 resiudes
+minimum_swap_ratio: 0.05   # min swap: 1 residue
+swap_reconstruct: parent
+swap_random_probability: 0.05  # only for swap_reconstruction: choose
+# ------------------
+positive_preference: False
+positive_position: 0.
+positive_tolerance: 0.5
+negative_preference: False
+negative_position: -1.
+negative_tolerance: 0.5
+# ------------------
+prohibited_patterns: 
+  [
+  ]
+excluded_sequences:
+  [
+  ]
+peptide_len: 20
+sequences: 
+  [
+  ]
+
+# --- restrictions ---
+hydrophobic_restriction: True
+hydrophobic_min: 0.25
+hdistribution_restriction: False
+hindex_restriction: True
+hindex_min: -200
+hindex_max: -5.
+charge_restriction: False
+charge_min: 2.
+charge_max: 6.
+iterations_elite: 1
+population: 32
+discard_ratio: 0.75   # 8 parents --> 1/4 of the population
+mut_aa: ADEFKLNQRSTY  #  reduced alphabet; important aa found in ecoli vs human evolution
+constructor: constructor # constructor method
+calculator: calculations # calculator method
+analyzer: analyzer # analyzer method
+sleep_time: 1800  # 30 min
+max_check_cycle: 400 # 200 hours = 8.3 days
