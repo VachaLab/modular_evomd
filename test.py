@@ -1,6 +1,8 @@
 # === test.py ===
 from radial_sequence import get_radial
 import sys
+from instructor import Instructor
+from generator import Generator
 
 def read_csv(csv_file):
     with open(csv_file, 'r') as f:
@@ -9,19 +11,10 @@ def read_csv(csv_file):
     return lines
 
 def main():
-    lines = read_csv(sys.argv[1])
-    print(lines)
-    radials = []
-    for seq, fit in lines:
-        radial = get_radial(seq)
-        radials.append([radial, fit])
-    print(radials)
-    with open('sequences_radial.csv', 'w') as f:
-        f.write('Sequence,Fitness\n')
-        for seq, fit in radials:
-            text = f'{seq},{fit}'
-            f.write(text)
-    print('done')
+    inst = Instructor("inputfile.yaml")
+    print(inst.populate_method)
+    inst.configure_generator()
+    print(inst.generator)
 
 if __name__ == '__main__':
     main()

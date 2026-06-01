@@ -138,6 +138,7 @@ class Generator:
         extra_mutation: bool = False,
         extra_mutation_prob: float = 0.2,
         restrictions: list[Restriction] | None = None,
+        initial_method: GenMethod | None = None,
         
     ) -> None:
 
@@ -164,8 +165,11 @@ class Generator:
             )
         self.weights: list[float] = weights
 
-        # Built-in fallback used when generate() is called without parents.
-        self._initial_fallback: _RandomInitial = _RandomInitial()
+        # Method used when generate() is called without parents.
+        # Defaults to the built-in random initializer for backward compatibility.
+        self._initial_fallback: GenMethod = (
+            initial_method if initial_method is not None else _RandomInitial()
+        )
 
         # Extra mutation configuration.
         self.extra_mutation: bool = extra_mutation
@@ -236,13 +240,19 @@ class Generator:
         Returns True when seq satisfies all registered Restriction instances.
         Logs the failure reason at DEBUG level when a restriction is not met.
         """
+        if verbose:
+            print("--- Checking restrictions ---")
         for restriction in self.restrictions:
             if not restriction.test(seq, verbose=verbose):
                 logger.debug(
                     f"Generator: sequence '{seq}' rejected by "
                     f"{restriction.__class__.__name__}: {restriction.message}"
                 )
+                if verbose:
+                    print("--- Rejected :( ---")
                 return False
+        if verbose:
+            print("--- Sequence accepted :) ---")
         return True
 
     # Core generation -------------------------------------------------------

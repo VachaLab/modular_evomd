@@ -81,18 +81,18 @@ class CompositionRestriction(Restriction):
     def __init__(
         self,
         residues: str,
-        min_count: int = 0,
-        max_count: Optional[int] = None,
+        min: int = 0,
+        max: Optional[int] = None,
     ) -> None:
         super().__init__()
         self._residues: frozenset[str] = frozenset(residues.upper())
-        self._min: int = min_count
-        self._max: Optional[int] = max_count
+        self._min: int = min
+        self._max: Optional[int] = max
 
         if self._max is not None and self._min > self._max:
             raise ValueError(
-                f"CompositionRestriction: min_count ({self._min}) must be "
-                f"<= max_count ({self._max})."
+                f"CompositionRestriction: min ({self._min}) must be "
+                f"<= max ({self._max})."
             )
 
     def test(self, seq: str, verbose=False) -> bool:
@@ -107,21 +107,108 @@ class CompositionRestriction(Restriction):
             else f"[{self._min}, ∞)"
         )
         if passed:
-            self.message = (
-                f"count of {{''.join(sorted(self._residues))}} is {count}, "
+            message = (
+                f"count of {''.join(sorted(self._residues))} is {count}, "
                 f"within {bound_str}"
             )
         else:
-            self.message = (
+            message = (
                 f"count of {''.join(sorted(self._residues))} is {count}, "
                 f"outside {bound_str}"
             )
+
+        if verbose:
+            print(f"{message}. Pass: {passed}")
         return passed
 
     def __repr__(self) -> str:
         return (
             f"CompositionRestriction(residues='{''.join(sorted(self._residues))}', "
-            f"min_count={self._min}, max_count={self._max})"
+            f"min={self._min}, max={self._max})"
+        )
+
+
+class HdistributionRestriction(Restriction):
+    """
+    Acepta secuencias cuya distribución de hidrofobicidad (índice de alternancia)
+    cae dentro de un rango especificado.
+
+    El índice se calcula como el promedio de las diferencias absolutas de 
+    hidrofobicidad entre residuos adyacentes usando la escala de Eisenberg.
+    Residuos no presentes en la escala se tratan como neutros (0.0) y se 
+    registra una advertencia.
+
+    Parameters
+    ----------
+    min : float | None
+        Índice de alternancia mínimo aceptado (inclusivo). None significa sin límite inferior.
+    max : float | None
+        Índice de alternancia máximo aceptado (inclusivo). None significa sin límite superior.
+    """
+
+    def __init__(
+        self,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> None:
+        super().__init__()
+
+        if min is None and max is None:
+            raise ValueError(
+                "HdistributionRestriction requires at least one of "
+                "'min' or 'max'."
+            )
+        self._min: Optional[float] = min
+        self._max: Optional[float] = max
+
+        if (
+            self._min is not None
+            and self._max is not None
+            and self._min > self._max
+        ):
+            raise ValueError(
+                f"HdistributionRestriction: min ({self._min}) must be "
+                f"<= max ({self._max})."
+            )
+
+        # Import here to avoid circular dependency at module level.
+        from scales import Scales
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+
+    def test(self, seq: str, verbose=False) -> bool:
+        # 1. Convertir la secuencia a valores numéricos y manejar residuos desconocidos
+        valores = []
+        for aa in seq.upper():
+            if aa not in self._hi_table:
+                logger.warning(
+                    f"HdistributionRestriction: unrecognized residue '{aa}' treated as neutral (0.0)."
+                )
+            valores.append(self._hi_table.get(aa, 0.0))
+
+        # 2. Calcular el índice de distribución (alternancia)
+        if len(valores) < 2:
+            dist_index = 0.0  # Si la secuencia tiene 0 o 1 aminoácido, la diferencia es 0
+        else:
+            diferencias = [abs(valores[i+1] - valores[i]) for i in range(len(valores)-1)]
+            dist_index = sum(diferencias) / len(diferencias)
+
+        # 3. Evaluar contra los límites min y max
+        above_min = self._min is None or dist_index >= self._min
+        below_max = self._max is None or dist_index <= self._max
+
+        passed = above_min and below_max
+
+        # 4. Imprimir resultados si es verbose
+        if verbose:
+            bound_str = f"[{self._min}, {self._max}]"
+            print(f"Hdistribution restriction: {bound_str} Current: {dist_index:.4f} = Pass: {passed}")
+
+        return passed
+
+    def __repr__(self) -> str:
+        return (
+            f"HdistributionRestriction(min={self._min}, "
+            f"max={self._max})"
         )
 
 
@@ -154,27 +241,31 @@ class PatternRestriction(Restriction):
             else:
                 self._plain.append(p.upper())
 
-    def test(self, seq: str) -> bool:
+    def test(self, seq: str, verbose=False) -> bool:
         seq_upper = seq.upper()
+
+        passed = True
+        message = "no forbidden patterns found"
 
         # Check plain substrings first.
         for pattern in self._plain:
             if pattern in seq_upper:
-                self.message = f"forbidden substring '{pattern}' found in '{seq}'"
-                return False
+                message = f"forbidden substring '{pattern}' found in '{seq}'"
+                passed = False
 
         # Check regex patterns.
         for rx in self._regex:
             match = rx.search(seq_upper)
             if match:
-                self.message = (
+                message = (
                     f"forbidden pattern '{rx.pattern}' matched at "
                     f"position {match.start()} in '{seq}'"
                 )
-                return False
+                passed = False
 
-        self.message = "no forbidden patterns found"
-        return True
+        if verbose:
+            print(f"{message}. Pass: {passed}")
+        return passed
 
     def __repr__(self) -> str:
         plain = self._plain
@@ -395,4 +486,44 @@ class HmomentRestriction(Restriction):
             f"max={self._max})"
         )
 
-        
+class ForbiddenSequence(Restriction):
+    """
+    Rejects sequences that exactly match any sequence in a forbidden set.
+
+    Unlike PatternRestriction, which matches substrings or regex patterns,
+    this restriction compares the whole candidate against each forbidden
+    entry. It is intended for user-supplied excluded_sequences: specific
+    peptides that must never appear during evolution.
+
+    Matching is case-insensitive and based on full-string equality.
+
+    Parameters
+    ----------
+    sequences : list[str]
+        Forbidden sequences. Each candidate equal to one of these (ignoring
+        case) is rejected.
+    """
+
+    def __init__(self, sequences: list[str]) -> None:
+        super().__init__()
+        # Store as an uppercase set for O(1) membership tests.
+        self._forbidden: frozenset[str] = frozenset(
+            str(s).upper() for s in sequences
+        )
+
+    def test(self, seq: str, verbose=False) -> bool:
+        candidate = str(seq).upper()
+        passed = candidate not in self._forbidden
+
+        if passed:
+            message = f"'{seq}' is not in the forbidden set"
+        else:
+            message = f"'{seq}' is a forbidden sequence"
+
+        self.message = message
+        if verbose:
+            print(f"{message}. Pass: {passed}")
+        return passed
+
+    def __repr__(self) -> str:
+        return f"ForbiddenSequence(n={len(self._forbidden)})"

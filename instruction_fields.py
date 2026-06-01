@@ -1,6 +1,6 @@
-# === fields.py ===
+# === instruction_fields.py ===
 import logging
-from typing import Any, Type, Optional, Sequence, Dict, List
+from typing import Any, Type, Optional, Sequence, Dict, List, Callable
 from instruction_validators import *
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,8 @@ class Instruction:
             choices: Optional[Sequence[Any]] = None,
             subchoices: Optional[Any] = None,
             range: Optional[Sequence[Any]] = None,
+            normalize: Optional[Callable[[Any], Any]] = None,   # <-- nuevo
+            choice_list: bool = False,   # <-- nuevo
             ):
         # --- mandatory
         self.type_ = type_
@@ -25,13 +27,17 @@ class Instruction:
         self.choices = choices
         self.subchoices = subchoices
         self.range = range
+        self.normalize = normalize   # <-- nuevo
 
         self.validators: List[Validator] = [TypeValidator(self.type_)]
 
         if self.subtype:
             self.validators.append(SubtypeValidator(self.subtype))
         if self.choices:
-            self.validators.append(ChoiceValidator(self.choices))
+            if choice_list:
+                self.validators.append(StrOrChoiceListValidator(self.choices))
+            else:
+                self.validators.append(ChoiceValidator(self.choices))
         if self.subchoices:
             self.validators.append(SubchoiceValidator(self.subchoices))
         if self.range:
@@ -48,12 +54,18 @@ class Instruction:
         return instance.__dict__.get(self.name, self.default)
 
     def __set__(self, instance, value):
+        if value is None and self.default is None:
+            instance.__dict__[self.name] = None
+            return
         for validator in self.validators:
             if not validator.validate(value):
                 self._warn(value)
                 instance.__dict__[self.name] = self.default
                 return
-        instance.__dict__[self.name] = self.type_(value)
+        if self.normalize is not None:
+            instance.__dict__[self.name] = self.normalize(value)
+        else:
+            instance.__dict__[self.name] = self.type_(value)
     
     def _warn(self, value):
         logger.warning(f"Invalid value '{value}' for '{self.name}' --> Using default: {self.default}")

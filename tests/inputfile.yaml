@@ -1,5 +1,5 @@
 optimize: maximize
-populate_method: swap
+populate_method: [swap, hybrids, faces]
 mixture_options: [
   faces,
   mutations,

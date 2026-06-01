@@ -64,3 +64,20 @@ class RangeValidator(Validator):
 
     def validate(self, value: Any) -> bool:
         return self.min <= value <= self.max
+
+class StrOrChoiceListValidator(ChoiceValidator):
+    """
+    Accepts either:
+      - a non-empty str that is in choices, or
+      - a non-empty list whose every element is in choices.
+    Empty list / empty str are rejected (caller falls back to default).
+    """
+    def validate(self, value: Any) -> bool:
+        if isinstance(value, str):
+            return value in self.choices
+        if isinstance(value, list):
+            if not value:                      # empty list -> invalid -> default
+                return False
+            return all(item in self.choices for item in value)
+        return False
+
