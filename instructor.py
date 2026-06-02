@@ -38,11 +38,11 @@ class Instructor:
     populate_method = Instruction(
         (str, list),
         ['swap'],
-        choices={'hybrids', 'group_mutation', 'hydrophobic_mutation', 'swap', 'faces', 'pattern'},
+        choices={'hybrids', 'group_mutation', 'hydrophobic_mutation', 'swap', 'faces', 'pattern', 'flanks'},
         choice_list=True, normalize=lambda v: [v] if isinstance(v, str) else list(v),)
     method_weights = Instruction(list, None, subtype=float)
     extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
-    also_mutate_probability = Instruction(float, 0.2, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
+    also_mutate_probability = Instruction(float, 0.1, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
     include_parents = Instruction(bool, False)   # to include parents in next iteration
     include_resurrection = Instruction(bool, False)  # test again a random discarded sequence
     resurrection_probability = Instruction(float, 0.001)  # probability of resurrection instead of generate sequence
@@ -55,6 +55,10 @@ class Instructor:
     pattern_options = Instruction(list, None)  # available residues to change each free position '-': all mut_aa by default
     pattern_weights = Instruction(list, None)  # weights for each option: equal weights by default
     pattern_maxmut = Instruction(int, 1) # maximum number of mutations done at the same time.
+    # --- work with flanks ---
+    n_flank = Instruction(str, None)
+    c_flank = Instruction(str, None)
+    flank_inner = Instruction(str, 'swap', choices={'hybrids', 'group_mutation', 'hydrophobic_mutation', 'swap'})
         
     # choosing parents
     discard_ratio = Instruction(float, 0.7)  # A maximum of 70% of the sequences can be descarted == 30% parents --> this will be refactored as self.parent_ratio but not today
@@ -96,8 +100,9 @@ class Instructor:
     analyzer = Instruction(str, '')
 
     # --- evo iteration ---
-    sleep_time = Instruction(int, 3600)  # sleep time in seconds
-    max_check_cycle = Instruction(int, 48)
+    max_gen_attemps = Instruction(int, 100000)
+    sleep_time = Instruction(int, 1800)  # sleep time in seconds
+    max_check_cycle = Instruction(int, 144)
     max_generations = Instruction(int, None)
     convergence_criterium = Instruction(float, None)
 
@@ -125,6 +130,7 @@ class Instructor:
                 setattr(self, name, field.default)
         ##############################
         self.__config_keys = list(self.__dict__)[2:]
+        self.configure_generator()
         self.cwd = os.getcwd()
 
     # special methods ---------------------------
@@ -197,69 +203,134 @@ class Instructor:
 
         return restrictions
 
-    def set_gen_methods(self):
-        # choices={'hybrids', 'group_mutation', 'hydrophobic_mutation', 'swap', 'faces', 'random', 'pattern'}
-        # validate self.populate_method and self.method_weights
-        if len(self.populate_method) == 1:
-            logger.info("Instructor: Only 1 method selected. Ignoring method_weights.")
-            self.method_weights = [1.]
-        elif len(self.populate_method) > 1 and self.method_weights is None:
-            logger.warning("Instructor: No weights received for the selected methods. Evolver will select the methods with equal probability.")
-            self.method_weights = [1. for k in self.populate_method]
-        elif len(self.populate_method) != len(self.method_weights):
-            raise ValueError("Instructor: populate_method and method_weights must have the same length!")
-
-        methods = []
-        for met in self.populate_method:
-            if met == 'hybrids':
-                from hybrid import Hybrid
-                method_ = Hybrid()
-                methods.append(method_)
-            if met == 'swap':
-                from swap import Swap
-                method_ = Swap()
-                methods.append(method_)
-            if met == 'faces':
-                from faces_mix import FacesMix
-                method_ = FacesMix(slice_angle=self.face_slice_angle)
-                methods.append(method_)
-            if met == 'group_mutation':
-                from directed_mutations import GroupMutation
-                method_ = GroupMutation()
-                methods.append(method_)
-            if met == 'hydrophobic_mutation':
-                from directed_mutations import HydrophobicityMutation
-                method_ = HydrophobicityMutation()
-                methods.append(method_)
-            if met == 'pattern':
-                from pattern import Pattern
-                initial = Pattern(
-                    pattern=self.pattern,
-                    options=self.pattern_options,
-                    weights=self.pattern_weights,
-                    max_mutations=self.pattern_maxmut,
-                )
-        
-        return methods
-
-    def configure_generator(self) -> None:
-        rest_list = self.configure_restrictions()
-        methods = self.set_gen_methods()
-
-        # Optional template-based initial fill
-        initial = None
-        if 'pattern' in self.populate_method:
+    def _build_single_method(self, met):
+        """
+        Builds and returns a single GenMethod instance for the method name
+        `met`. Flanks is intentionally NOT handled here: it is a wrapper and
+        is assembled separately in set_gen_methods() to avoid recursion.
+        Returns None for unknown names.
+        """
+        if met == 'hybrids':
+            from hybrid import Hybrid
+            return Hybrid()
+        if met == 'swap':
+            from swap import Swap
+            return Swap()
+        if met == 'faces':
+            from faces_mix import FacesMix
+            return FacesMix(slice_angle=self.face_slice_angle)
+        if met == 'group_mutation':
+            from directed_mutations import GroupMutation
+            return GroupMutation()
+        if met == 'hydrophobic_mutation':
+            from directed_mutations import HydrophobicityMutation
+            return HydrophobicityMutation()
+        if met == 'pattern':
             from pattern import Pattern
-            initial = Pattern(
+            return Pattern(
                 pattern=self.pattern,
                 options=self.pattern_options,
                 weights=self.pattern_weights,
                 max_mutations=self.pattern_maxmut,
             )
+        logger.warning(f"Instructor: unknown populate_method '{met}' --> ignored")
+        return None
+
+    def set_gen_methods(self):
+        """
+        Builds the working methods and the initial (no-parent) method from
+        populate_method and method_weights.
+
+        Returns
+        -------
+        (methods, weights, initial_method) : tuple
+            methods         : list[GenMethod] passed to Generator.methods
+            weights         : list[float] aligned with methods
+            initial_method  : GenMethod | None used by Generator for the
+                              no-parent (first-fill) call.
+
+        Special rules
+        -------------
+        - 'pattern' is exclusive: it cannot be combined with any other method.
+        - 'flanks' forces the initial method to be Flanks itself, and wraps the
+          remaining selected methods as its inner methods (never Flanks itself,
+          so it is not recursive). The inner methods are NOT registered loose
+          in the Generator; only Flanks is.
+        """
+        # Normalize / validate weights against populate_method.
+        if len(self.populate_method) == 1:
+            logger.info("Instructor: Only 1 method selected. Ignoring method_weights.")
+            self.method_weights = [1.]
+        elif len(self.populate_method) > 1 and self.method_weights is None:
+            logger.warning("Instructor: No weights received for the selected methods. "
+                           "Methods will be selected with equal probability.")
+            self.method_weights = [1. for _ in self.populate_method]
+        elif len(self.populate_method) != len(self.method_weights):
+            raise ValueError("Instructor: populate_method and method_weights "
+                             "must have the same length!")
+
+        # --- 'pattern' is exclusive --------------------------------------
+        if 'pattern' in self.populate_method:
+            if len(self.populate_method) > 1:
+                raise ValueError(
+                    "Instructor: 'pattern' cannot be combined with other "
+                    f"methods, got {self.populate_method}."
+                )
+            pattern_method = self._build_single_method('pattern')
+            # Pattern works both as the initial (no-parent) method and as the
+            # single working method.
+            return [pattern_method], [1.], pattern_method
+
+        # --- 'flanks' wraps the other selected methods -------------------
+        if 'flanks' in self.populate_method:
+            from flanks import Flanks
+
+            # Collect every selected method except flanks itself (no recursion),
+            # carrying along its weight.
+            inner_methods = [self._build_single_method(self.flank_inner)]
+            inner_weights = [1.]
+            
+            flanks_method = Flanks(
+                n_flank=self.n_flank,
+                c_flank=self.c_flank,
+                methods=inner_methods,
+                weights=inner_weights if inner_weights else None,
+                extra_mutation=self.extra_mutation,
+                extra_mutation_prob=self.also_mutate_probability,
+            )
+
+            # reset self.also_mutate_probability to 0 after configuring flanks
+            # This avoids undesired changes in flanks.
+            self.also_mutate_probability = 0
+            # Flanks is the only method the Generator sees, and also the only
+            # valid no-parent initial method (it knows how to attach flanks to
+            # a random core).
+            return [flanks_method], [1.], flanks_method
+
+        # --- regular case: one or more loose methods ---------------------
+        methods = []
+        weights = []
+        for met, w in zip(self.populate_method, self.method_weights):
+            built = self._build_single_method(met)
+            if built is not None:
+                methods.append(built)
+                weights.append(w)
+
+        if not methods:
+            raise ValueError(
+                f"Instructor: no valid method built from {self.populate_method}."
+            )
+
+        # No explicit initial method: Generator falls back to _RandomInitial.
+        return methods, weights, None
+
+    def configure_generator(self) -> None:
+        rest_list = self.configure_restrictions()
+        methods, weights, initial = self.set_gen_methods()
 
         gen = Generator(
             methods=methods,
-            weights=self.method_weights,
+            weights=weights,
             aa_pool=self.mut_aa,
             peptide_len=self.peptide_len,
             extra_mutation=self.extra_mutation,
@@ -268,6 +339,9 @@ class Instructor:
             initial_method=initial,
         )
         self.generator = gen
+
+
+    
 
 
 if __name__ == '__main__':

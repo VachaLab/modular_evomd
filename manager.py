@@ -62,15 +62,6 @@ class Manager:
             else:
                 method(sequence=seq)
 
-    def apply_penalty(self, seq, penalty_module):
-        """
-        Compute and apply penalties
-        """
-        if self.evolver.instructor.apply_penalty == 'once' and len(seq.penalties) > 0:
-            return 
-        penalty = self.execute_method(seq, penalty_module, return_value=True)
-        seq.penalties.append(penalty)
-
     # run codes ---------------------
     def run_constructors(self):
         """
@@ -203,15 +194,6 @@ class Manager:
         # get function
         analyzer_function = get_module_function(analyzer_module, self.analyzer_name, critical=True)
 
-        # get penalty module
-        compute_penalty = True
-        penalty_module = self.evolver.instructor.penalty
-        if not penalty_module:
-            compute_penalty = False
-            logger.warning("Manager: No penalty module defined in Instructor --> skipping")
-        else:
-            penalty_module = get_module_function(penalty_module, self.penalty_name, critical=False)
-        
         # iterate on sequences
         for seq in self.evolver.sequences:
             if not seq.is_waiting_analysis:
@@ -222,9 +204,7 @@ class Manager:
                 seq.fitness.append(fitness_value)
                 seq.is_waiting_analysis = False
                 seq.completed_simulations += 1
-                # include penalty if required
-                # if compute_penalty:
-                #     self.apply_penalty(seq, penalty_module)
+
             except Exception as e:
                 logger.error(f"Manager: Error while running {self.analyzer_name} for sequence '{seq}' in directory '{seq.last_iter_dir}': {e}")
                 continue   # continue with the next sequence

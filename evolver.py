@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class Evolver:
     name = 'evolver'
 
-    def __init__(self, instructor, recover=False, verbose=True) -> None:
+    def __init__(self, instructor, recover=False, fast_cycle=False, verbose=True) -> None:
         self.instructor = instructor
         self.manager = Manager(self)  # Manager creates directories 
         self.name = self.instructor.evolver_name
@@ -29,6 +29,7 @@ class Evolver:
         self.started = False
         self.runnable = True  # used to stop optimization iteratively
         self.recover_enabled = recover
+        self.fast_cycle = fast_cycle # if true, save_pkl() is avoided during iterations
         self.verbose = verbose
     
     # special methods ----------------------------------------
@@ -327,7 +328,7 @@ class Evolver:
             # first population
             print("First population.")
             while len(self.sequences) < self.instructor.population:
-                candidate = self.instructor.generator.generate(verbose=self.verbose)
+                candidate = self.instructor.generator.generate(verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
                 # is not valid if the sequences already exists and avoid_reinsertion is True
                 if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
                     print('Sequence already exists --> discarding')
@@ -351,7 +352,7 @@ class Evolver:
                     reverse=False, include_elite=True, exception=parent1,
                     include_discarded=self.instructor.include_discarded
                     )
-                candidate = self.instructor.generator.generate(seq1=parent1, seq2=parent2, verbose=self.verbose)
+                candidate = self.instructor.generator.generate(seq1=parent1, seq2=parent2, verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
                 # is not valid if the sequences already exists and avoid_reinsertion is True
                 if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
                     print('Sequence already exists --> discarding')
@@ -525,13 +526,13 @@ class Evolver:
             for old in self.parent_sequences:
                 if str(old) == seq:
                     existing_seq = old  # get the old sequence object
-                    self.discarded_sequences.remove(existing_seq)  # remove from the list
+                    self.parent_sequences.remove(existing_seq)  # remove from the list
                     break  # stop looking for the sequence
         if not existing_seq:
             for old in self.sequences:
                 if str(old) == seq:
                     existing_seq = old  # get the old sequence object
-                    self.discarded_sequences.remove(existing_seq)  # remove from the list
+                    self.sequences.remove(existing_seq)  # remove from the list
                     break  # stop looking for the sequence
         if existing_seq:
             logger.info(f'Evolver: taking_sequence: sequence {seq} is taken')
@@ -615,7 +616,8 @@ class Evolver:
                 logger.error(f"Evolver: Constructor step failed with error: {e}")
                 return
             # save at the end of each step
-            self.save_pkl()
+            if not self.fast_cycle:
+                self.save_pkl()
 
         # Step 2: Run simulations (submit jobs to external software)
         if step_flags['calculate']:
@@ -625,7 +627,8 @@ class Evolver:
             except Exception as e:
                 logger.error(f"Evolver: Calculator step failed with error: {e}")
                 return
-            self.save_pkl()
+            if not self.fast_cycle:
+                self.save_pkl()
 
         # Step 3: Check status of running simulations
         if step_flags['check']:
@@ -635,7 +638,8 @@ class Evolver:
             except Exception as e:
                 logger.error(f"Evolver: Checker step failed with error: {e}")
                 return
-            self.save_pkl()
+            if not self.fast_cycle:
+                self.save_pkl()
 
         # Step 4: Analyze results and compute fitness
         if step_flags['analyze']:
@@ -645,7 +649,8 @@ class Evolver:
             except Exception as e:
                 logger.error(f"Evolver: Analyzer step failed with error: {e}")
                 return
-            self.save_pkl()
+            if not self.fast_cycle:
+                self.save_pkl()
 
         # Step 5: Mark sequences with failed simulations
         self.set_failed()

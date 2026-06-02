@@ -12,8 +12,12 @@ optimize: maximize
 
 # Antes: populate_method: swap + mixture_options/mixture_weights.
 # Ahora la "mixture" ES populate_method como lista, con method_weights.
-populate_method: [faces, swap, hybrids,]
-method_weights: [1, 1, 1,]
+populate_method: [swap, hybrids, faces]
+method_weights: [1, 1, 1,] 
+
+n_flank: EEEEE
+c_flank: KKKKK
+flank_inner: hybrids
 
 populate_weighted: false
 extra_mutation: true
@@ -35,15 +39,15 @@ peptide_len: 20
 sequences: []
 
 # --- restricciones ---
-hydrophobic_restriction: False
+hydrophobic_restriction: True
 hydrophobic_min: 5.5
 hydrophobic_max: 100               # añadido: el campo existe y conviene fijar el tope
 
 hdistribution_restriction: False
 
-hindex_restriction: False
+hindex_restriction: True
 hindex_min: -200
-hindex_max: -5.0
+hindex_max: -5.
 
 charge_restriction: False
 charge_min: 2.0
@@ -51,7 +55,7 @@ charge_max: 6.0
 
 # --- elite y poblacion ---
 iterations_elite: 1
-population: 32
+population: 128
 discard_ratio: 0.75                # 8 padres -> 1/4 de la poblacion
 
 mut_aa: ADEFKLNQRSTY               # alfabeto reducido

@@ -22,7 +22,7 @@ peptide_len: 22                    # longitud de los peptidos
 population: 120                    # tamano de la poblacion a simular por generacion
 
 # Metodos de generacion. Puede ser un solo string o una lista.
-# Opciones validas: hybrids, group_mutation, hydrophobic_mutation, swap, faces, pattern
+# Opciones validas: hybrids, group_mutation, hydrophobic_mutation, swap, faces, pattern, flanks
 populate_method: [swap]
 # Pesos por metodo (misma longitud que populate_method). None = equiprobable.
 method_weights: null
@@ -48,6 +48,10 @@ pattern_options: null              # ej: [['A','M'], ['K'], ['?'], ...]
 # pattern_weights: pesos por opcion, misma forma que pattern_options. null = uniforme.
 pattern_weights: null
 pattern_maxmut: 1                  # max. posiciones mutadas a la vez (modo con padre)
+
+# --- metodo 'flanks' --------------------------------------------------------
+n_flank = null
+c_flank = null
 
 # --- eleccion de padres -----------------------------------------------------
 discard_ratio: 0.7                 # fraccion maxima descartada (0.7 -> 30% padres)
