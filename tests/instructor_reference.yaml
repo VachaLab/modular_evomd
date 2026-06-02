@@ -1,0 +1,108 @@
+# ============================================================================
+# instructor_reference.yaml
+# ----------------------------------------------------------------------------
+# Archivo de referencia con TODAS las variables ajustables del Instructor.
+# Cada clave aparece con su valor por defecto y un comentario explicativo.
+# Las claves que no aparezcan en el YAML toman su valor por defecto, asi que
+# este archivo es equivalente a "no pasar nada", pero sirve como documentacion.
+#
+# Tipos: los validadores del Instructor convierten numeros al tipo correcto.
+# Un valor None (default de algunos campos) significa "sin definir / automatico".
+# ============================================================================
+
+# --- identidad y salida -----------------------------------------------------
+evomd_directory: simulation_data   # carpeta donde se guardan los datos de simulacion
+evolver_name: evolver              # nombre del evolver (usado para el .pkl)
+optimize: maximize                 # 'maximize' o 'minimize' del fitness
+top_list: 10                       # cuantas secuencias mostrar en el reporte de estado
+
+# --- poblacion --------------------------------------------------------------
+mut_aa: ACDEFGHIKLMNPQRSTVWY       # alfabeto de aminoacidos permitidos (pool)
+peptide_len: 22                    # longitud de los peptidos
+population: 120                    # tamano de la poblacion a simular por generacion
+
+# Metodos de generacion. Puede ser un solo string o una lista.
+# Opciones validas: hybrids, group_mutation, hydrophobic_mutation, swap, faces, pattern
+populate_method: [swap]
+# Pesos por metodo (misma longitud que populate_method). None = equiprobable.
+method_weights: null
+
+# Mutacion extra aplicada tras la generacion principal (solo metodos con padre).
+extra_mutation: true               # aplicar o no una mutacion puntual extra
+also_mutate_probability: 0.2       # probabilidad de esa mutacion extra [0, 1]
+
+include_parents: false             # incluir padres en la siguiente iteracion
+include_resurrection: false        # reintroducir una secuencia descartada al azar
+resurrection_probability: 0.001    # probabilidad de resurreccion en vez de generar
+populate_discarded: false          # usar descartadas para crear nuevas secuencias
+avoid_reinsertion: true            # una secuencia ya probada queda prohibida
+
+# --- metodo 'faces' ---------------------------------------------------------
+face_slice_angle: 180              # angulo total de rebanada (grados) [0, 360]
+
+# --- metodo 'pattern' -------------------------------------------------------
+# pattern: plantilla; '-' marca posiciones libres a variar, el resto es fijo.
+pattern: null                      # ej: 'AY---L-V---KK' (null = sin patron)
+# pattern_options: lista de listas, una por posicion libre. ['?'] o vacio = pool completo.
+pattern_options: null              # ej: [['A','M'], ['K'], ['?'], ...]
+# pattern_weights: pesos por opcion, misma forma que pattern_options. null = uniforme.
+pattern_weights: null
+pattern_maxmut: 1                  # max. posiciones mutadas a la vez (modo con padre)
+
+# --- eleccion de padres -----------------------------------------------------
+discard_ratio: 0.7                 # fraccion maxima descartada (0.7 -> 30% padres)
+populate_weighted: false           # si true, mejores peptidos tienen preferencia
+weight_bias: 0.3                   # sesgo: peso = (poblacion - indice) * weight_bias
+include_discarded: false           # incluir descartadas al elegir padres
+
+# --- restricciones ----------------------------------------------------------
+# momento hidrofobico
+hydrophobic_restriction: true
+hydrophobic_min: 5.5
+hydrophobic_max: 100
+
+# indice de hidrofobicidad (promedio por residuo, escala eisenberg)
+hindex_restriction: false
+hindex_min: -9.0
+hindex_max: -6.5
+
+# carga neta
+charge_restriction: false
+charge_min: -100
+charge_max: 100
+
+# patrones prohibidos (subcadenas o regex). ej: KKK = tres K o mas seguidas
+prohibited_patterns: []
+
+# composicion minima de residuos cargados
+positive_atleast: 0                # minimo de residuos positivos (K, R)
+negative_atleast: 0                # minimo de residuos negativos (D, E)
+
+# distribucion de hidrofobicidad (indice de alternancia)
+hdistribution_restriction: false
+hdistribution_threshold: 0.9
+
+# secuencias prohibidas exactas (no apareceran durante la evolucion)
+excluded_sequences: []
+
+# secuencias iniciales (semilla). Si se dan, deben medir peptide_len.
+sequences: []
+
+# --- validacion -------------------------------------------------------------
+check_validity: true               # validar las secuencias iniciales
+
+# --- elite ------------------------------------------------------------------
+iterations_elite: 3                # generaciones antes de marcar elite
+elite_ratio: 0.01                  # fraccion maxima de elite (1%)
+elite_bias: 2.0                    # sesgo de eleccion para elite (solo si weighted)
+
+# --- metodos externos (modulos del usuario) ---------------------------------
+constructor: ''                    # nombre del modulo constructor
+calculator: ''                     # modulo con calculator y checker
+analyzer: ''                       # modulo analyzer
+
+# --- iteracion evolutiva ----------------------------------------------------
+sleep_time: 3600                   # segundos de espera entre chequeos
+max_check_cycle: 48                # ciclos maximos de chequeo de simulaciones
+max_generations: null              # tope de generaciones (null = sin tope explicito)
+convergence_criterium: null        # criterio de convergencia (null = sin criterio)

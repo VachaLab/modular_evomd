@@ -121,7 +121,7 @@ def plot_peptide(
             overlap = [np.linalg.norm(np.array([x, y]) - v) < 0.05 for v in visited_xy]
             if visited_xy and any(overlap):
                 df = 1.3
-            ax.scatter(x * df, y * df, c=[colors[res.index]], s=350, alpha=1, zorder=3)
+            ax.scatter(x * df, y * df, c=[colors[res.index]], s=370, alpha=1, zorder=3)
             visited_xy.append(np.array([x, y]))
         else:
             ax.scatter(x, y, z, c=[colors[res.index]], s=100, alpha=0.8)

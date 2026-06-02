@@ -182,6 +182,12 @@ class Evolver:
 
         return validity_value
     
+    def sequence_exists(self, seq):
+        all_lists = self.sequences + self.discarded_sequences + self.parent_sequences
+        if seq in all_lists:
+            return True
+        return False
+    
     # decide and choose ----------------------------------------------------
     def is_top_index(self, index):
         """
@@ -259,317 +265,8 @@ class Evolver:
                 base_weight *= multiplier  # Aumento o reducción del peso si es elite
             weights.append(base_weight)
         return random.choices(population, weights=weights, k=1)[0]
-
-    def _get_populate_method(self, first=False):
-        if first:
-            populate_method = self.instructor.first_fill
-        else:
-            populate_method = self.instructor.populate_method
-
-        # if for some reason the populate method doesnt exist...
-        if not hasattr(self, f'_{populate_method}'):
-            raise ValueError(f"Method '{populate_method}' does not exist.")
-        
-        # get populate method
-        populate_method = getattr(self, f'_{populate_method}')
-        return populate_method
-
-    # creators ----------------------------------------------------
-    def create_sequence(self, seq, generation=0):
-        """
-        General function to create Sequence objects.
-        Not used.
-        """
-        h_scale = self.instructor.hydrophobic_scale
-        return Sequence(seq, generation=generation, h_scale=h_scale)
     
-    def random_sequence(self) -> str:
-        """Generate a random peptide sequence."""
-        logger.debug('---------RANDOM--------')
-        son_seq = ''.join(random.choices(self.instructor.mut_aa, k=self.instructor.peptide_len))
-        logger.debug(f'{son_seq} < result')
-        return son_seq
-    
-    def pattern_variation(self, parent=None) -> str:
-        """Generate a sequence from a pattern using weights and options"""
-        logger.debug('---------PATTERN--------')
-        # get indexes of free positions
-        free_indexes = [n for n, k in enumerate(self.instructor.pattern) if k == '-']
-        # Choose new aa and decide if mutate or not
-        if parent is None:
-            new_sequence = [k for k in self.instructor.pattern]
-        else:
-            new_sequence = [k for k in parent.sequence]
-
-        text = f'Parent sequence is: {"".join(new_sequence)}'
-        logger.debug(text)
-        for n, i in enumerate(free_indexes):
-            mut_decission = self.take_bool_decision(self.instructor.pattern_probabilities[n])
-            new_aa = random.choices(self.instructor.pattern_options[n], weights=self.instructor.pattern_weights[n], k=1)[0]
-            if parent is None:
-                logger.debug('Adding {} in position {}'.format(new_aa, i))
-                new_sequence[i] = new_aa
-                continue
-            if mut_decission:
-                logger.debug('Changing {} by {} in position {}'.format(new_sequence[i], new_aa, i))
-                new_sequence[i] = new_aa
-        final_sequence = ''.join(new_sequence)
-        logger.debug('Final sequence: {}'.format(final_sequence))
-        return final_sequence
-
-    
-    def swap_sequence(self, parent1, parent2=None, helix=True) -> str:
-        """destroy a section of a sequence and reconstruct it from parent2 or randomly if parent2=None"""
-        logger.debug('---------SWAP--------')
-        # Be sure to have a str
-        logger.debug(f'{parent1} < parent')
-        
-        # maximum size of the fragment
-        max_size = int(self.instructor.peptide_len * self.instructor.maximum_swap_ratio)
-        min_size = int(self.instructor.peptide_len * self.instructor.minimum_swap_ratio)
-        
-        idx1 = 0
-        idx2 = 0
-        fragment_len = 10000 # start always with a bigger number
-        while not min_size <= fragment_len <= max_size:
-            # choose two indexes
-            idx1 = random.randint(0, len(parent1) - 1)
-            idx2 = random.randint(0, len(parent1) - 1)
-            # idx1 must be bigger than idx2
-            if idx1 > idx2:
-                idx1, idx2 = idx2, idx1
-            fragment_len = idx2 - idx1
-        logger.debug('{}{}'.format(' '*idx1, '^'*fragment_len))
-
-        # how will sequence be reconstructed?
-        if parent2:
-            # from parents
-            new_fragment = parent2[idx1:idx2]
-            if helix:
-                # swap based on proximity
-                logger.debug('Looking for closest residue')
-                new_positions = parent2.get_positions()
-                old_fragment = [k.position for k in parent1.residues[idx1:idx2]]
-                new_fragment = []
-                for pos in old_fragment:
-                    proximity = [np.linalg.norm(k-pos) for k in new_positions]
-                    min_index = np.argmin(proximity)
-                    closer = parent2[min_index]
-                    new_fragment.append(closer)
-                    logger.debug(f'closest residue {closer} at {round(proximity[min_index], 3)}')
-                new_fragment = ''.join(new_fragment)
-        else:
-            # randomly
-            new_fragment = ''.join(random.choices(self.instructor.mut_aa, k=fragment_len))
-        
-        if parent2:
-            logger.debug(f'{parent2} < parent2')
-        else:
-            logger.debug('{}{}{} < random'.format(' '*idx1, new_fragment, ' '*(self.instructor.peptide_len-idx2)))
-        
-        son_seq = parent1[:idx1] + new_fragment + parent1[idx2:]
-        logger.debug(f'{son_seq} < result')
-
-        return son_seq
-    
-    def hybridize_sequences(self, parent1, parent2) -> str:
-        """Create a hybrid sequence giving priority to earlier and elite sequences."""
-        logger.debug('---------HYBRIDS--------')
-
-        # random crossover
-        crossover = random.randint(1, self.instructor.peptide_len - 1)
-        logger.debug(f'{parent1} < parent1')
-        logger.debug('{}'.format(parent1[:crossover]))
-        logger.debug(f'{parent2} < parent2')
-        logger.debug('{}{}'.format(' '*crossover,parent2[crossover:]))
-
-        son_seq = parent1[:crossover] + parent2[crossover:]
-        logger.debug(f'{son_seq} < result')
-
-        # return hybrid
-        return son_seq
-
-    def mix_faces(self, parent1, parent2) -> str:
-        """
-        Creates a sequence mixing the faces of two peptides. 
-        'reference_face' is always the base face.
-        Positive face is hydrophobic.
-        """
-        logger.debug('---------FACE MIX--------')
-        logger.debug('{} < parent1'.format(parent1))
-        logger.debug('{} < parent2'.format(parent2))
-
-        # get faces
-        pos_1, neg_1  = parent1.get_faces(phi=self.instructor.face_slice_angle)
-        positions_1 = parent1.get_positions()
-        positions_2 = parent2.get_positions()
-        base_face = self.instructor.face_reference
-
-        # -- choose base face ---
-        if base_face == 'positive':
-            logger.debug('reference is positive face')
-            # positive face is taken as base
-            reference_face = pos_1
-            other_face = neg_1
-        elif base_face == 'negative':
-            logger.debug('reference is negative face')
-            # negative face is taken as base
-            reference_face = neg_1
-            other_face = pos_1
-        elif base_face == 'random':
-            # base_face is selected randomly 
-            if self.take_bool_decision(probability=0.5):
-                logger.debug('reference is positive (random)')
-                reference_face = pos_1
-                other_face = neg_1
-            else:
-                logger.debug('reference is negative (random)')
-                reference_face = neg_1 
-                other_face = pos_1
-
-        # --- create new sequence ---
-        # 1. put all the aa from one_face and '-' in the other_face position
-        new_sequence = [k if n in reference_face else '-' for n, k in enumerate(str(parent1))]
-        logger.debug('{} < reference'.format(''.join(new_sequence)))
-        logger.debug(f'{len(other_face)} positions for reconstruction')
-
-        # 2. fill in empty spaces with equivalent positions in parent2
-        # run on other_face and positions_2
-        included = ['-' for k in range(self.instructor.peptide_len)]
-        positions_test = [k for k in positions_2]
-        sequence_2 = [k for k in parent2]
-        for index in other_face:
-            # distances from reference to parent2
-            distances = np.array([np.linalg.norm(k-positions_1[index]) for n, k in enumerate(positions_test)])
-            min_index = np.argmin(distances)
-            new_sequence[index] = sequence_2[min_index]
-            included[index] = sequence_2[min_index]
-            positions_test = np.array([k for k in positions_test[:min_index]] + [k for k in positions_test[min_index+1:]])
-            sequence_2.pop(min_index)
-
-        logger.debug('{} < included'.format(''.join(included)))
-
-        # are there still missing residues?
-        for index, aa in enumerate(new_sequence):
-            if aa == '-':
-                logger.debug(f'missing residue: including {str(parent1)[index]} in position {index}')
-                new_sequence[index] = parent1[index]
-            else:
-                continue
-        
-        # 3. join sequences and return
-        logger.debug('{} < result'.format(''.join(new_sequence)))
-        return ''.join(new_sequence)
-
-    def mutate_sequence(self, parent) -> str:
-        """
-        Mutate one position of a sequence.
-        If seq=None, a sequence is selected from self.sequences
-        """
-        logger.debug('---------MUTATION--------')
-        logger.debug('{} < parent'.format(parent))
-
-        # choose position to be mutated
-        idx = random.randint(0, self.instructor.peptide_len - 1)
-        logger.debug('{}^'.format(' '*idx))
-
-        # choose new residue
-        new_aa = random.choice(self.instructor.mut_aa)
-        logger.debug('{}{}'.format(' '*idx, new_aa))
-
-        # create the son sequence
-        son_seq = parent[:idx] + new_aa + parent[idx + 1:]
-        logger.debug('{} < result'.format(son_seq))
-        
-        return son_seq
-    
-    def mutate_similar(self, parent) -> str:
-        """
-        Generates a mutant choosing the new residue based on the hydrophobicity of the 
-        current residue (similarity)
-        """
-        logger.debug('---------SIMILARITY MUTATION--------')
-        logger.debug('{} < parent'.format(parent))
-
-        # choose position to be mutated
-        idx = random.randint(0, self.instructor.peptide_len - 1)
-        logger.debug('{}^'.format(' '*idx))
-
-        # save hydrophobicity of current residue
-        res_h = parent.residues[idx].hydrophobicity
-        res_c = parent.residues[idx].charge
-        res_cvec = parent.residues[idx].cvec
-        res_g = parent.residues[idx].group
-
-        # choose new residue
-        aa_pool = ''.join([k for k in self.instructor.mut_aa if k != parent.residues[idx].letter])
-        aa_pool = Sequence(aa_pool) # create a sequence to have residue information
-        # weights = [round(np.dot(res_cvec, k.cvec) ** 4, 3) for k in aa_pool.residues]
-        weights = [round( 1/(abs(res_g - k.group) + 1E-8) , 3) for k in aa_pool.residues]
-        # normalize weights x' = x - min / max - min
-        v_min = min(weights)
-        v_max = max(weights)
-
-        if v_max == v_min:
-            normalized = [0.0 for _ in weights]  # degenerated
-        else:
-            normalized = [(v - v_min) / (v_max - v_min) for v in weights]
-
-        new_aa = random.choices([k for k in aa_pool.residues], weights=normalized, k=1)[0]
-        logger.debug('{}{}'.format(' '*idx, new_aa))
-
-        # create the son sequence
-        son_seq = parent[:idx] + new_aa.letter + parent[idx + 1:]
-
-        logger.debug('Current value: {: } '.format(res_g)) 
-        logger.debug('New value:     {: } '.format(new_aa.group)) 
-        logger.debug('{} < result'.format(son_seq))
-        
-        return son_seq
-
-    def mutate_hydrophobicity(self, parent) -> str:
-        """
-        Generates a mutant choosing the new residue based on the hydrophobicity of the 
-        current residue (similarity)
-        """
-        logger.debug('---------HYDROPHOBICITY MUTATION--------')
-        logger.debug('{} < parent'.format(parent))
-
-        # choose position to be mutated
-        idx = random.randint(0, self.instructor.peptide_len - 1)
-        logger.debug('{}^'.format(' '*idx))
-
-        # save hydrophobicity of current residue
-        res_h = parent.residues[idx].hydrophobicity
-
-        # choose new residue
-        aa_pool = ''.join([k for k in self.instructor.mut_aa if k != parent.residues[idx].letter])
-        aa_pool = Sequence(aa_pool) # create a sequence to have residue information
-        weights = [round( (abs(res_h - k.hydrophobicity) ) , 3) for k in aa_pool.residues]
-        # normalize weights x' = x - min / max - min
-        v_min = min(weights)
-        v_max = max(weights)
-
-        if v_max == v_min:
-            normalized = [0.0 for _ in weights]  # degenerated
-        else:
-            normalized = [(v - v_min) / (v_max - v_min) for v in weights]
-
-        # adjust weights
-        weights = [1-k for k in weights]
-        # weighted choice
-        new_aa = random.choices([k for k in aa_pool.residues], weights=normalized, k=1)[0]
-        logger.debug('{}{}'.format(' '*idx, new_aa))
-
-        # create the son sequence
-        son_seq = parent[:idx] + new_aa.letter + parent[idx + 1:]
-
-        logger.debug('Current value: {: } '.format(res_h)) 
-        logger.debug('New value:     {: } '.format(new_aa.hydrophobicity)) 
-        logger.debug('{} < result'.format(son_seq))
-        
-        return son_seq
-
+    # Populate -------------------------
     def first_sequences(self) -> None:
         print('Evolver: Starting sequences')
         # Create first sequences from Instructor.sequences
@@ -613,6 +310,7 @@ class Evolver:
         """
         Populate self.sequences
         """
+        logger.debug("Start Evolver.populate()")
         # if it's already populated, do nothing
         if len(self.sequences) == self.instructor.population:
             logger.warning('Evolver: Already populated --> skipping')
@@ -625,278 +323,44 @@ class Evolver:
         # First population if Evolver is not started
         # No parents given to Generator
         if not self.started:
+            logger.debug("Evolver.start == False. Running first population.")
             # first population
             print("First population.")
             while len(self.sequences) < self.instructor.population:
                 candidate = self.instructor.generator.generate(verbose=self.verbose)
                 # is not valid if the sequences already exists and avoid_reinsertion is True
-                if self.sequence_exists(seq) and self.instructor.avoid_reinsertion:
+                if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
                     print('Sequence already exists --> discarding')
                     continue
                 logger.info(f'New sequence: {candidate}')
                 self.sequences.append(Sequence(candidate))
-            self.parent_sequences = []
                 
         else:
-            # move failed_sequences and to_include
-            try:
-               len(self.to_include)
-            except:
-                self.to_include = []
-            if len(self.to_include) > 0:
-                logger.info('Evolver: External sequences found --> including sequences')
-                self.include_sequences()
+            logger.debug(f"Evolver.start == True. Generation {self.generations}")
             # populate using populate_method
-            populate_method = self._get_populate_method()
-            logger.info(f'Evolver: Populating with method {self.instructor.populate_method}')
+            print("Filling Population.")
             while len(self.sequences) < self.instructor.population:
-                candidate = populate_method()
-                logger.info(f'New sequence: {candidate}')
-                self.sequences.append(candidate)
-            # discard self.parent_sequences after populate
-            self.discarded_sequences = self.parent_sequences + self.discarded_sequences
-            self.parent_sequences = []
-
-    def _random(self):
-        """
-        Fills self.sequences completely random
-        """     
-        while True:
-            candidate = self.random_sequence()
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-    
-    def _pattern(self):
-        """
-        Creates sequences using self.instructor.pattern
-        """
-        loop_state = True
-        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
-            candidate = self._resurrection()
-            loop_state = False
-                
-        while loop_state:
-            if self.started:
-                parent = self.choose_sequence(
+                # Choose parents: always 2?
+                parent1 = self.choose_sequence(
                     weighted=self.instructor.populate_weighted, 
                     reverse=False, include_elite=True,
                     include_discarded=self.instructor.include_discarded
                     )
-            else:
-                parent = None
-
-            candidate = self.pattern_variation(parent=parent)
-            if self.instructor.extra_mutation:
-                # it can be also mutated (check instructor.also_mutate_probability 
-                # and instructor.extra_mutation)
-                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
-                if also_mutate:
-                    candidate = self.mutate_sequence(candidate)
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-
-    def _mixture(self):
-        """
-        Creates or takes a sequence generated by a mixture of weighted hybrids,
-        mutants and random sequences.
-
-        returns Sequence
-        """
-        logger.debug('Evolver: mixture method started . . . ')
-        # Use probabilities from Instructor
-        # choose a generation method: mutate, hybrid, faces ...
-        options = self.instructor.mixture_options
-        weights = self.instructor.mixture_weights
-        method = random.choices(options, weights=weights, k=1)[0]
-        logger.debug(f'Evolver: generating with "{method}"')
-        if method == 'hybrids':
-            candidate = self._hybrids()
-        elif method == 'faces':
-            candidate = self._faces()
-        elif method == 'mutations':
-            candidate = self._mutations()
-        elif method == 'swap':
-            candidate = self._swap()
-        elif method == 'random':
-            candidate = self._random()
-        
-        return candidate
-
-    def _hybrids(self):
-        """
-        Creates linear hybrids from parents 
-        """
-        loop_state = True
-        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
-            candidate = self._resurrection()
-            loop_state = False
-                
-        while loop_state:
-            parent1 = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True,
-                include_discarded=self.instructor.include_discarded
-                )
-            parent2 = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True, exception=parent1,
-                include_discarded=self.instructor.include_discarded
-                )
-            candidate = self.hybridize_sequences(parent1, parent2)
-            if self.instructor.extra_mutation:
-                # it can be also mutated (check instructor.also_mutate_probability 
-                # and instructor.extra_mutation)
-                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
-                if also_mutate:
-                    candidate = self.mutate_sequence(candidate)
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-    
-    def _faces(self):
-        """
-        Creates sequences mixing faces. Check description in self.mix_faces()
-        """
-        loop_state = True
-        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
-            candidate = self._resurrection()
-            loop_state = False
-                
-        while loop_state:
-            parent1 = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True,
-                include_discarded=self.instructor.include_discarded
-                )
-            parent2 = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True, exception=parent1,
-                include_discarded=self.instructor.include_discarded
-                )
-            candidate = self.mix_faces(parent1, parent2)
-            if self.instructor.extra_mutation:
-                # it can be also mutated (check instructor.also_mutate_probability 
-                # and instructor.extra_mutation)
-                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
-                if also_mutate:
-                    candidate = self.mutate_sequence(candidate)
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-
-    def _mutations(self):
-        """
-        Creates mutants using self.instructor.mut_aa
-        """
-        loop_state = True
-        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
-            candidate = self._resurrection()
-            loop_state = False
-                
-        while loop_state:
-            parent = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True,
-                include_discarded=self.instructor.include_discarded
-                )
-            if self.instructor.mutation_method == 'similarity':
-                candidate = self.mutate_similar(parent)
-            elif self.instructor.mutation_method == 'hydrophobicity':
-                candidate = self.mutate_similar(parent)
-            else:
-                candidate = self.mutate_sequence(parent)
-            if self.instructor.extra_mutation:
-                # it can be also mutated (check instructor.also_mutate_probability 
-                # and instructor.extra_mutation)
-                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
-                if also_mutate:
-                    candidate = self.mutate_sequence(candidate)
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-
-    def _swap(self):
-        """
-        Creates sequences based on swap method
-        """
-        loop_state = True
-        if self.instructor.include_resurrection and len(self.discarded_sequences) > 0:
-            candidate = self._resurrection()
-            loop_state = False
-                
-        while loop_state:
-            parent1 = self.choose_sequence(
-                weighted=self.instructor.populate_weighted, 
-                reverse=False, include_elite=True,
-                include_discarded=self.instructor.include_discarded
-                )
-            parent2 = None
-            if self.instructor.swap_reconstruct == 'parent':
                 parent2 = self.choose_sequence(
                     weighted=self.instructor.populate_weighted, 
                     reverse=False, include_elite=True, exception=parent1,
                     include_discarded=self.instructor.include_discarded
                     )
-            elif self.instructor.swap_reconstruct == 'choose':
-                random_swap = self.take_bool_decision(probability=self.instructor.swap_random_probability)
-                if not random_swap:
-                    parent2 = self.choose_sequence(
-                        weighted=self.instructor.populate_weighted, 
-                        reverse=False, include_elite=True, exception=parent1,
-                        include_discarded=self.instructor.include_discarded
-                        )
-                else:
-                    parent2 = None
-            candidate = self.swap_sequence(parent1, parent2=parent2)
-            if self.instructor.extra_mutation:
-                # it can be also mutated (check instructor.also_mutate_probability 
-                # and instructor.extra_mutation)
-                also_mutate = self.take_bool_decision(probability=self.instructor.also_mutate_probability)
-                if also_mutate:
-                    candidate = self.mutate_sequence(candidate)
-            if self.is_valid_sequence(candidate):
-                break
-        if self.sequence_exists(candidate):
-            candidate = self.take_sequence(candidate)
-            candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
-        else:
-            candidate = Sequence(candidate, generation=self.generations)
-        return candidate
-    
-    def _resurrection(self):
-        resurrection = self.take_bool_decision(probability=self.instructor.resurrection_probability)
-        if not resurrection:
-            return None
-        candidate = self.choose_sequence(weighted=False, only_discarded=True)
-        candidate.check_resurrection()
-        return candidate
+                candidate = self.instructor.generator.generate(seq1=parent1, seq2=parent2, verbose=self.verbose)
+                # is not valid if the sequences already exists and avoid_reinsertion is True
+                if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
+                    print('Sequence already exists --> discarding')
+                    continue
+                logger.info(f'New sequence: {candidate}')
+                self.sequences.append(Sequence(candidate, generation=self.generations))
+            # discard self.parent_sequences after populate
+            self.discarded_sequences = self.parent_sequences + self.discarded_sequences
+            self.parent_sequences = []
 
     # methods to save and restore sequences ---------------------------------
     def read_previous(self):

@@ -252,7 +252,7 @@ class Generator:
                     print("--- Rejected :( ---")
                 return False
         if verbose:
-            print("--- Sequence accepted :) ---")
+            print("--- Candidate accepted :) ---")
         return True
 
     # Core generation -------------------------------------------------------
@@ -341,7 +341,7 @@ class Generator:
                         f"{attempt} attempt(s): '{candidate}'"
                     )
                     if verbose:
-                        print(f"New sequence from method {self._initial_fallback.method_name}: {candidate}")
+                        print(f"Delivering sequence from method {self._initial_fallback.method_name}: {candidate}")
                     return candidate
 
             raise RuntimeError(
@@ -382,7 +382,7 @@ class Generator:
                     f"Generator: valid sequence found after {attempt} attempt(s): '{candidate}'"
                 )
                 if verbose:
-                    print(f"New sequence from method {method.method_name}: {candidate}")
+                    print(f"Delivering sequence from method {method.method_name}: {candidate}")
                 return candidate
 
         raise RuntimeError(

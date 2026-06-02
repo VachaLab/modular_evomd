@@ -1,0 +1,83 @@
+# ============================================================================
+# instructor_test.yaml
+# ----------------------------------------------------------------------------
+# Traduccion de tu YAML de pruebas a la arquitectura modular actual.
+#
+# NOTA IMPORTANTE: varias claves de tu YAML original pertenecian al Evolver
+# monolitico y YA NO existen en el Instructor actual. Se tradujeron o se
+# omitieron segun corresponde. El detalle esta al final del archivo.
+# ============================================================================
+
+optimize: maximize
+
+# Antes: populate_method: swap + mixture_options/mixture_weights.
+# Ahora la "mixture" ES populate_method como lista, con method_weights.
+populate_method: [faces, swap, hybrids,]
+method_weights: [1, 1, 1,]
+
+populate_weighted: false
+extra_mutation: true
+also_mutate_probability: 0.1       # 10% de las secuencias generadas reciben mutacion extra
+include_discarded: false
+
+# Antes: first_fill: random. Ahora es automatico: sin 'pattern' en populate_method,
+# el llenado inicial del Generator usa _RandomInitial. No hay clave que poner.
+
+check_validity: false
+
+# 'faces': solo el angulo de rebanada tiene equivalente actual.
+face_slice_angle: 120
+
+# ------------------ secuencias y patrones ------------------
+prohibited_patterns: []
+excluded_sequences: []
+peptide_len: 20
+sequences: []
+
+# --- restricciones ---
+hydrophobic_restriction: False
+hydrophobic_min: 5.5
+hydrophobic_max: 100               # añadido: el campo existe y conviene fijar el tope
+
+hdistribution_restriction: False
+
+hindex_restriction: False
+hindex_min: -200
+hindex_max: -5.0
+
+charge_restriction: False
+charge_min: 2.0
+charge_max: 6.0
+
+# --- elite y poblacion ---
+iterations_elite: 1
+population: 32
+discard_ratio: 0.75                # 8 padres -> 1/4 de la poblacion
+
+mut_aa: ADEFKLNQRSTY               # alfabeto reducido
+
+# --- metodos externos ---
+constructor: constructor           # modulo constructor
+calculator: calculations           # modulo calculator/checker
+analyzer: analyzer                 # modulo analyzer
+
+# --- iteracion ---
+sleep_time: 1800                   # 30 min
+max_check_cycle: 400               # ~8.3 dias
+
+# ============================================================================
+# CLAVES DE TU YAML ORIGINAL QUE SE OMITIERON (ya no existen en Instructor):
+#
+#   mixture_options / mixture_weights -> ahora son populate_method/method_weights
+#   first_fill: random              -> automatico (sin 'pattern' -> _RandomInitial)
+#   face_reference: negative        -> FacesMix actual no expone esta opcion
+#   maximum_swap_ratio: 0.25        -> Swap actual no usa ratios configurables
+#   minimum_swap_ratio: 0.05        -> idem
+#   swap_reconstruct: parent        -> Swap actual reconstruye siempre desde el padre 2
+#   swap_random_probability: 0.05   -> idem
+#   positive_preference / positive_position / positive_tolerance -> sin equivalente
+#   negative_preference / negative_position / negative_tolerance -> sin equivalente
+#
+# Si las cargas en el YAML, _load_yaml las leera pero el Instructor las ignora
+# (no estan en _schema), asi que no rompen nada; simplemente no tienen efecto.
+# ============================================================================
