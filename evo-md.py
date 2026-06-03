@@ -5,7 +5,7 @@ import logging
 
 def setup_logging():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format='%(levelname)s: %(message)s'
     )
 #--------------------------------------------
@@ -15,15 +15,18 @@ from evolver import Evolver
 import utils
 
 
-def iterate_evolver(evo):
+def iterate_evolver(evo, fast_cycle=False):
     evo.iterate()
-    evo.save_pkl()  # save again
+    if not fast_cycle:
+        evo.save_pkl()  # save again
 
-def handling_evolver(evo):
+def handling_evolver(evo, fast_cycle=False):
     evo.sort_sequences()
-    evo.save_pkl()  # save after sorting
+    if not fast_cycle:
+        evo.save_pkl()  # save after sorting
     evo.populate()
-    evo.save_pkl()  # save again
+    if not fast_cycle:
+        evo.save_pkl()  # save again
 
 def get_evolver(args, skip_new=False, internal=False):
     logger = logging.getLogger(__name__)
@@ -101,6 +104,8 @@ def main():
     elif args.create_evolver:
         # It just creates evolver and exit
         evo = get_evolver(args)
+        # set fast_cycle
+        evo.fast_cycle = args.fast_cycle
         # populate sequences
         evo.populate()
         evo.save_pkl()
@@ -125,26 +130,33 @@ def main():
     elif args.start:
         evo = get_evolver(args)
 
+        # set fast_cycle
+        evo.fast_cycle = args.fast_cycle
+
         # populate sequences
         evo.populate()
         evo.started = True
-        evo.save_pkl()
+        if not args.fast_cycle:
+            evo.save_pkl()
 
         while evo.runnable:
             # --- reload evolver ---
-            evo = get_evolver(args, internal=True)
+            if not args.fast_cycle:
+                evo = get_evolver(args, internal=True)
 
             # --- iterate ---
-            iterate_evolver(evo)
+            iterate_evolver(evo, fast_cycle=args.fast_cycle)
 
             # --- sort and repopulate ---
-            handling_evolver(evo)
+            handling_evolver(evo, fast_cycle=args.fast_cycle)
 
             # --- back up sequences ---
-            evo.sequence_backup()
+            if not args.fast_cycle:
+                evo.sequence_backup()
 
             # --- check stopping criteria ---
             evo.check_termination()
+            
 
         evo.save_pkl()
         print(evo)

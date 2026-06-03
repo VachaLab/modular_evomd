@@ -4,6 +4,7 @@ from sequence import Sequence
 import random
 import numpy as np
 from manager import Manager
+from sequence_geometry import compute_hm_scalar, compute_helix_positions
 
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class Evolver:
         total_sequences = len(self.sequences) + len(self.discarded_sequences) + len(self.parent_sequences)
         lines = ['===== EVOLVER CURRENT STATE =====\n']
         lines.append(f"{'Optimization':<24}: {str(self.instructor.optimize)}\n")
+        
         is_weighted = ''
         if self.instructor.populate_weighted:
             is_weighted = 'weighted-'
@@ -50,7 +52,10 @@ class Evolver:
         is_resurrection = ''
         if self.instructor.include_resurrection:
             is_resurrection = ' + resurrection'
-        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}{is_resurrection}\n")
+        fast = ''
+        if self.fast_cycle:
+            fast = ' Fast'
+        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}{is_resurrection}{fast}\n")
         lines.append(f"{'Started':<24}: {str(self.started)}\n")
         lines.append(f"{'Generations':<24}: {str(self.generations)}\n")
         lines.append(f"{'Current sequences':<24}: {len(self.sequences)}\n")
@@ -64,9 +69,10 @@ class Evolver:
             if len(all_sequences) < i+1:
                 break
             seq = all_sequences[i]
-            fitness = seq.get_mean_fitness()
+            positions = compute_helix_positions(seq)
+            fitness = seq.fitness
             fitness = f"{fitness:<8.4f}" if fitness is not None else f"{'-':<8}"
-            hm = f"{round(seq.hydrophobic_moment, 3)}"
+            hm = f"{round(compute_hm_scalar(seq, positions), 3)}"
             hi = f"{seq.hydrophobic_index}"
             ch = f"{round(seq.charge, 1)}"
             lines.append(f"{i+1:<24}: {str(seq):<{pep_len}} {fitness:<8} {hm:<8} {hi:<8} {ch:<8}\n")
@@ -90,8 +96,10 @@ class Evolver:
             fo.write('sequence,generation,Hm,Hi,fitness\n')
             all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
             for seq in all_sequences:
-                fitness = seq.get_mean_fitness()
-                fo.write(f'{seq.sequence},{seq.generation},{seq.hydrophobic_moment},{seq.hydrophobic_index},{fitness}\n')
+                fitness = seq.fitness
+                positions = compute_helix_positions(seq)
+                hm = compute_hm_scalar(seq, positions)
+                fo.write(f'{seq.sequence},{seq.generation},{hm},{seq.hydrophobic_index},{fitness}\n')
 
     def plot_evolution(self, show_std=False, show_kids=False):
         import math
@@ -118,7 +126,7 @@ class Evolver:
         already_checked = []
         for g in avail_gens:
             seq_gen = [k for k in sequences_plot if k.generation == g]
-            all_fit = [k.get_mean_fitness() for k in seq_gen]
+            all_fit = [k.fitness for k in seq_gen]
             already_checked.extend(all_fit)
             all_fit = np.array(all_fit)
             ave_kids.append(np.mean(all_fit))
@@ -397,7 +405,7 @@ class Evolver:
         # start analysis
         self.iterate(new_plan=[False, False, False, True])
         # remove fitness None and nan
-        self.sequences = [k for k in self.sequences if k.get_mean_fitness() is not None and not math.isnan(k.get_mean_fitness())]
+        self.sequences = [k for k in self.sequences if k.fitness is not None and not math.isnan(k.fitness)]
         # sort sequences
         self.sort_sequences()
         # showing sequences
@@ -452,15 +460,15 @@ class Evolver:
             seq.current_index = None
 
         # divide in two lists to avoid order issues related to None 
-        valid = [s for s in all_sequences if s.get_mean_fitness() is not None and not math.isnan(s.get_mean_fitness())]
-        invalid = [s for s in all_sequences if s.get_mean_fitness() is None or math.isnan(s.get_mean_fitness())]
+        valid = [s for s in all_sequences if s.fitness is not None and not math.isnan(s.fitness)]
+        invalid = [s for s in all_sequences if s.fitness is None or math.isnan(s.fitness)]
 
         reverse = True  # maximize is default
         if str(self.instructor.optimize).lower() == 'minimize':
             reverse = False
 
         # order only in valid elements
-        valid.sort(key=lambda seq: seq.get_mean_fitness(), reverse=reverse)
+        valid.sort(key=lambda seq: seq.fitness, reverse=reverse)
         all_sequences = valid + invalid  # join the ordered list with None elements
 
         # split lists
@@ -670,9 +678,15 @@ class Evolver:
 
         # What are the convergence criteria?
         # Here we have just a maximum number of cycles
-        if self.generations >= 1000:
-            logger.info("Evolver: Max generations reached --> stopping")
-            self.runnable = False
+        if self.instructor.max_generations is not None:
+            if self.generations >= self.instructor.max_generations:
+                logger.info("Evolver: Max generations reached --> stopping")
+                self.runnable = False
+        if self.instructor.target_fitness is not None:
+            if self.discarded_sequences[0].fitness >= self.instructor.target_fitness:
+                logger.info("Evolver: Target fitness reached --> stopping")
+                self.runnable = False
+
 
 if __name__ == '__main__':
     pass

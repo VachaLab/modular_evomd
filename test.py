@@ -15,7 +15,6 @@ def main():
     file_name = sys.argv[1]
     inst = Instructor(file_name)
     print(inst.populate_method)
-    inst.configure_generator()
     print(inst.generator)
     evo = Evolver(instructor=inst)
     evo.populate()

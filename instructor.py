@@ -22,9 +22,13 @@ class Instructor:
     name = 'instructor'
     _schema: Dict[str, Instruction] = {}
     # Write here the valid instructions with default values and default types
+    # --- basic configuration
     evomd_directory = Instruction(str, 'simulation_data')
     evolver_name = Instruction(str, 'evolver')
     optimize = Instruction(str, 'maximize', choices={'maximize', 'minimize'})
+    hydrofobic_scale = Instruction(str, 'eisenberg', choices={'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})
+
+    # --- sequence lists ---
     sequences = Instruction(list, [], subtype=str)
     excluded_sequences = Instruction(list, [], subtype=str)  # forbidden sequences 
     
@@ -104,7 +108,7 @@ class Instructor:
     sleep_time = Instruction(int, 1800)  # sleep time in seconds
     max_check_cycle = Instruction(int, 144)
     max_generations = Instruction(int, None)
-    convergence_criterium = Instruction(float, None)
+    target_fitness = Instruction(float, None)
 
     ##############################
 

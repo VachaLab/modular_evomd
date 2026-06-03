@@ -130,6 +130,11 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help='Go back to the last completed generation.'
     )
+    parser.add_argument(
+        '-fc', '--fast-cycle',
+        action='store_true',
+        help='Save pkl file only at the end of the evolution.'
+    )
 
     # test
     parser.add_argument(

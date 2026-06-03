@@ -391,16 +391,8 @@ class HindexRestriction(Restriction):
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
 
     def test(self, seq: str, verbose=False) -> bool:
-        hindex = 0.0
-        for aa in seq.upper():
-            if aa not in self._hi_table:
-                logger.warning(
-                    f"HindezRestriction: unrecognized residue '{aa}' treated as zero."
-                )
-            hindex += self._hi_table.get(aa, 0.0)
-        # hindex /= len(seq)
-
-        hindex = round(hindex, 4)
+        test_seq = Sequence(seq)
+        hindex = round(test_seq.hydrophobic_index, 4)
         above_min = self._min is None or hindex >= self._min
         below_max = self._max is None or hindex <= self._max
 

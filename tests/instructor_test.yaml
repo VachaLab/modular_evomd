@@ -55,19 +55,20 @@ charge_max: 6.0
 
 # --- elite y poblacion ---
 iterations_elite: 1
-population: 128
+population: 32
 discard_ratio: 0.75                # 8 padres -> 1/4 de la poblacion
 
 mut_aa: ADEFKLNQRSTY               # alfabeto reducido
 
 # --- metodos externos ---
-constructor: constructor           # modulo constructor
-calculator: calculations           # modulo calculator/checker
-analyzer: analyzer                 # modulo analyzer
+constructor: compute_hm
+calculator: compute_hm
+analyzer: compute_hm
 
 # --- iteracion ---
-sleep_time: 1800                   # 30 min
+sleep_time: 0                   # 30 min
 max_check_cycle: 400               # ~8.3 dias
+max_generations: 100
 
 # ============================================================================
 # CLAVES DE TU YAML ORIGINAL QUE SE OMITIERON (ya no existen en Instructor):
