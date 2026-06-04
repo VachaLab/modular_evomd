@@ -12,8 +12,8 @@ optimize: maximize
 
 # Antes: populate_method: swap + mixture_options/mixture_weights.
 # Ahora la "mixture" ES populate_method como lista, con method_weights.
-populate_method: [swap, hybrids, faces]
-method_weights: [1, 1, 1,] 
+populate_method: [swap, ]
+method_weights: [1, ]
 
 n_flank: EEEEE
 c_flank: KKKKK
@@ -68,7 +68,7 @@ analyzer: compute_hm
 # --- iteracion ---
 sleep_time: 0                   # 30 min
 max_check_cycle: 400               # ~8.3 dias
-max_generations: 100
+max_generations: 50
 
 # ============================================================================
 # CLAVES DE TU YAML ORIGINAL QUE SE OMITIERON (ya no existen en Instructor):

@@ -201,7 +201,7 @@ class Manager:
             try:
                 fitness_value = self.execute_method(seq, analyzer_function, return_value=True)
                 logger.info(f'Manager: Sequence {str(seq)}, value {fitness_value}')
-                seq.fitness.append(fitness_value)
+                seq.fitness_list.append(fitness_value)
                 seq.is_waiting_analysis = False
                 seq.completed_simulations += 1
 

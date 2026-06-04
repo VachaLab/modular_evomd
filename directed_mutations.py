@@ -15,9 +15,6 @@ logger = logging.getLogger(__name__)
 # Small epsilon to avoid division by zero when hydrophobicity values are identical.
 _EPSILON: float = 1e-8
 
-# Eisenberg hydrophobicity scale used by both methods as the reference.
-_EISENBERG: dict[str, float] = Scales.hydrophobicity_scales['eisenberg']
-
 # Group assignments from Scales, used by GroupMutation.
 _AA_GROUP: dict[str, int] = Scales.aa_group
 
@@ -129,6 +126,13 @@ class HydrophobicityMutation(GenMethod):
     method_name: str = 'HmMut'
     expected_parents: int = 1
 
+    def __init__(self, h_scale: str = 'eisenberg') -> None:
+        super().__init__()
+
+        self.h_scale = h_scale
+        self._EISENBERG: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
+
+
     def generate(self, seq1: Sequence, seq2: Sequence, verbose=False) -> str:
         pool: str = self.generator.aa_pool
         seq_str: str = str(seq1)
@@ -137,7 +141,7 @@ class HydrophobicityMutation(GenMethod):
         # Select a random position to mutate.
         idx: int = random.randint(0, length - 1)
         current_aa: str = seq_str[idx]
-        current_h: float = _EISENBERG.get(current_aa, 0.0)
+        current_h: float = self._EISENBERG.get(current_aa, 0.0)
 
         logger.debug(
             f"HydrophobicityMutation: position {idx} '{current_aa}' "
@@ -157,7 +161,7 @@ class HydrophobicityMutation(GenMethod):
 
         # Compute similarity weights: higher weight for closer hydrophobicity.
         weights: list[float] = [
-            1.0 / (abs(current_h - _EISENBERG.get(aa, 0.0)) + _EPSILON)
+            1.0 / (abs(current_h - self._EISENBERG.get(aa, 0.0)) + _EPSILON)
             for aa in candidates
         ]
 
@@ -165,7 +169,7 @@ class HydrophobicityMutation(GenMethod):
 
         logger.debug(
             f"HydrophobicityMutation: '{current_aa}' (h={current_h:.3f}) -> "
-            f"'{new_aa}' (h={_EISENBERG.get(new_aa, 0.0):.3f}) "
+            f"'{new_aa}' (h={self._EISENBERG.get(new_aa, 0.0):.3f}) "
             f"at position {idx}"
         )
 

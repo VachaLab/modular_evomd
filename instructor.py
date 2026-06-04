@@ -26,7 +26,7 @@ class Instructor:
     evomd_directory = Instruction(str, 'simulation_data')
     evolver_name = Instruction(str, 'evolver')
     optimize = Instruction(str, 'maximize', choices={'maximize', 'minimize'})
-    hydrofobic_scale = Instruction(str, 'eisenberg', choices={'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})
+    hydrofobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})
 
     # --- sequence lists ---
     sequences = Instruction(list, [], subtype=str)
@@ -165,12 +165,12 @@ class Instructor:
 
         if self.hydrophobic_restriction:
             from restriction import HmomentRestriction
-            restriction_ = HmomentRestriction(min=self.hydrophobic_min, max=self.hydrophobic_max)
+            restriction_ = HmomentRestriction(min=self.hydrophobic_min, max=self.hydrophobic_max, h_scale=self.instructor.hydrofobic_scale)
             restrictions.append(restriction_)
         
         if self.hindex_restriction:
             from restriction import HindexRestriction
-            restriction_ = HindexRestriction(min=self.hindex_min, max=self.hindex_max)
+            restriction_ = HindexRestriction(min=self.hindex_min, max=self.hindex_max, h_scale=self.instructor.hydrofobic_scale)
             restrictions.append(restriction_)
         
         if self.charge_restriction:
@@ -197,7 +197,7 @@ class Instructor:
 
         if self.hdistribution_restriction :
             from restriction import HdistributionRestriction
-            restriction_ = HdistributionRestriction(min=self.hdistribution_threshold, max=None)
+            restriction_ = HdistributionRestriction(min=self.hdistribution_threshold, max=None, h_scale=self.instructor.hydrofobic_scale)
             restrictions.append(restriction_)
         
         if self.excluded_sequences:
@@ -228,7 +228,7 @@ class Instructor:
             return GroupMutation()
         if met == 'hydrophobic_mutation':
             from directed_mutations import HydrophobicityMutation
-            return HydrophobicityMutation()
+            return HydrophobicityMutation(h_scale=self.instructor.hydrofobic_scale)
         if met == 'pattern':
             from pattern import Pattern
             return Pattern(

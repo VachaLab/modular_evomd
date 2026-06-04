@@ -41,7 +41,12 @@ class Evolver:
         pep_len = self.instructor.peptide_len + 2
         total_sequences = len(self.sequences) + len(self.discarded_sequences) + len(self.parent_sequences)
         lines = ['===== EVOLVER CURRENT STATE =====\n']
-        lines.append(f"{'Optimization':<24}: {str(self.instructor.optimize)}\n")
+
+        fast = ''
+        if self.fast_cycle:
+            fast = ' Fast'
+
+        lines.append(f"{'Optimization':<24}: {str(self.instructor.optimize)}{fast}\n")
         
         is_weighted = ''
         if self.instructor.populate_weighted:
@@ -52,17 +57,15 @@ class Evolver:
         is_resurrection = ''
         if self.instructor.include_resurrection:
             is_resurrection = ' + resurrection'
-        fast = ''
-        if self.fast_cycle:
-            fast = ' Fast'
-        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}{is_resurrection}{fast}\n")
+        
+        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}{is_resurrection}\n")
         lines.append(f"{'Started':<24}: {str(self.started)}\n")
         lines.append(f"{'Generations':<24}: {str(self.generations)}\n")
         lines.append(f"{'Current sequences':<24}: {len(self.sequences)}\n")
         lines.append(f"{'Parent sequences':<24}: {len(self.parent_sequences)}\n")
         lines.append(f"{'Discarded sequences':<24}: {len(self.discarded_sequences)}\n")
         lines.append(f"{'Total sequences':<24}: {total_sequences}\n")
-        lines.append(f"\n{f'Top {self.instructor.top_list}':<24}  {'Sequence':<{pep_len}} {'Fitness':<8} {'Hm':<8} {'Hi':<8} {'Charge':<8}\n")
+        lines.append(f"\n{f'Top {self.instructor.top_list}':<24}  {'Sequence':<{pep_len}} {'Gen':<5} {'Fitness':<8} {'Hm':<8} {'Charge':<8}\n")
         all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
         i = 0
         while i < self.instructor.top_list:
@@ -73,9 +76,9 @@ class Evolver:
             fitness = seq.fitness
             fitness = f"{fitness:<8.4f}" if fitness is not None else f"{'-':<8}"
             hm = f"{round(compute_hm_scalar(seq, positions), 3)}"
-            hi = f"{seq.hydrophobic_index}"
+            gen = seq.generation
             ch = f"{round(seq.charge, 1)}"
-            lines.append(f"{i+1:<24}: {str(seq):<{pep_len}} {fitness:<8} {hm:<8} {hi:<8} {ch:<8}\n")
+            lines.append(f"{i+1:<24}: {str(seq):<{pep_len}} {gen:<5} {fitness:<8} {hm:<8} {ch:<8}\n")
             i += 1
         lines.append('=================================\n')
         return ''.join(lines)
@@ -93,13 +96,11 @@ class Evolver:
         Write information of all sequences in a sequences_report.csv file
         """
         with open('sequences_report.csv', 'w') as fo:
-            fo.write('sequence,generation,Hm,Hi,fitness\n')
+            fo.write('sequence,generation,fitness\n')
             all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
             for seq in all_sequences:
                 fitness = seq.fitness
-                positions = compute_helix_positions(seq)
-                hm = compute_hm_scalar(seq, positions)
-                fo.write(f'{seq.sequence},{seq.generation},{hm},{seq.hydrophobic_index},{fitness}\n')
+                fo.write(f'{seq.sequence},{seq.generation},{fitness}\n')
 
     def plot_evolution(self, show_std=False, show_kids=False):
         import math

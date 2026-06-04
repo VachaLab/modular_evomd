@@ -150,6 +150,7 @@ class HdistributionRestriction(Restriction):
         self,
         min: Optional[float] = None,
         max: Optional[float] = None,
+        h_scale: str = 'eisenberg',
     ) -> None:
         super().__init__()
 
@@ -170,10 +171,12 @@ class HdistributionRestriction(Restriction):
                 f"HdistributionRestriction: min ({self._min}) must be "
                 f"<= max ({self._max})."
             )
+        
+        self.h_scale = h_scale
 
         # Import here to avoid circular dependency at module level.
         from scales import Scales
-        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
         # 1. Convertir la secuencia a valores numéricos y manejar residuos desconocidos
@@ -365,6 +368,7 @@ class HindexRestriction(Restriction):
         self,
         min: Optional[float] = None,
         max: Optional[float] = None,
+        h_scale: str = 'eisenberg',
     ) -> None:
         super().__init__()
 
@@ -386,13 +390,16 @@ class HindexRestriction(Restriction):
                 f"<= max ({self._max})."
             )
 
+        self.h_scale = h_scale
+
         # Import here to avoid circular dependency at module level.
         from scales import Scales
-        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
+        from sequence_geometry import compute_hi
         test_seq = Sequence(seq)
-        hindex = round(test_seq.hydrophobic_index, 4)
+        hindex = compute_hi(test_seq)
         above_min = self._min is None or hindex >= self._min
         below_max = self._max is None or hindex <= self._max
 
@@ -429,6 +436,7 @@ class HmomentRestriction(Restriction):
         self,
         min: Optional[float] = None,
         max: Optional[float] = None,
+        h_scale: str = 'eisenberg'
     ) -> None:
         super().__init__()
 
@@ -450,9 +458,11 @@ class HmomentRestriction(Restriction):
                 f"<= max ({self._max})."
             )
 
+        self.h_scale = h_scale
+
         # Import here to avoid circular dependency at module level.
         from scales import Scales
-        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales["eisenberg"]
+        self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
         from sequence_geometry import compute_helix_positions, compute_hm_scalar
