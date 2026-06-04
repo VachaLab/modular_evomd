@@ -305,7 +305,7 @@ def _run_pipeline(args: argparse.Namespace) -> None:
     Executes the full visualization pipeline given a populated Namespace.
     Shared by both main() and plot_sequence().
     """
-    seq = Sequence(args.sequence) if isinstance(args.sequence, str) else args.sequence
+    seq = Sequence(args.sequence, h_scale='eisenberg') if isinstance(args.sequence, str) else args.sequence
     cmap = plt.get_cmap(args.cmap)
 
     # Compute geometry before alignment to preserve the HM scalar magnitude

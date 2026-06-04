@@ -135,6 +135,12 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help='Save pkl file only at the end of the evolution.'
     )
+    parser.add_argument(
+        '-rr', '--read-report',
+        help='CSV report (sequence,generation,fitness) used to initialize the evolver '
+            'together with --create-evolver.',
+        default=None
+    )
 
     # test
     parser.add_argument(

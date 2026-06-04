@@ -1,4 +1,25 @@
 # === evolver.py ===
+"""
+Core of the evolutionary optimizer: the :class:`Evolver` class.
+
+An Evolver holds the population of peptide :class:`Sequence` objects and
+drives the genetic-algorithm cycle: populate -> simulate/evaluate ->
+sort -> repopulate, generation after generation. It delegates all the
+filesystem and simulation work to a :class:`Manager`, and reads its
+configuration from an :class:`Instructor` (built from the input YAML).
+
+Population lists
+----------------
+The population is split across three lists, rearranged every generation
+by :meth:`Evolver.sort_sequences`:
+
+    * ``self.sequences``          : elite sequences (re-simulated each generation)
+    * ``self.parent_sequences``   : sequences kept as parents for breeding
+    * ``self.discarded_sequences``: the rest (worst-ranked / already evaluated)
+
+State is persisted to ``<name>.pkl`` (default ``evolver.pkl``) via
+:meth:`Evolver.save_pkl`, so a run can be resumed after interruption.
+"""
 import logging
 from sequence import Sequence
 import random
@@ -11,9 +32,39 @@ logger = logging.getLogger(__name__)
 
 
 class Evolver:
+    """Genetic-algorithm optimizer over a population of peptide Sequences.
+
+    Parameters
+    ----------
+    instructor : Instructor
+        Holds all configuration (population size, ratios, optimization
+        direction, stop criteria, the sequence generator, etc.).
+    recover : bool
+        If True, the next iteration tries to resume pending sequences from
+        an interrupted session (see :meth:`iterate`).
+    fast_cycle : bool
+        If True, intermediate ``save_pkl`` calls are skipped; the pickle is
+        only written at the end of the run.
+    verbose : bool
+        Forwarded to the sequence generator for verbose logging.
+
+    Key attributes
+    --------------
+    sequences, parent_sequences, discarded_sequences : list[Sequence]
+        The three population lists (see module docstring).
+    generations : int
+        Current generation counter.
+    started : bool
+        False until the first population has been built; controls whether
+        ``populate`` breeds from parents or generates from scratch.
+    runnable : bool
+        Main-loop flag; set to False to stop the optimization.
+    """
+
     name = 'evolver'
 
-    def __init__(self, instructor, recover=False, fast_cycle=False, verbose=True) -> None:
+    def __init__(self, instructor, recover: bool = False,
+                 fast_cycle: bool = False, verbose: bool = True) -> None:
         self.instructor = instructor
         self.manager = Manager(self)  # Manager creates directories 
         self.name = self.instructor.evolver_name
@@ -34,10 +85,12 @@ class Evolver:
         self.verbose = verbose
     
     # special methods ----------------------------------------
-    def __len__(self):
+    def __len__(self) -> int:
+        """Number of sequences currently in the active ``sequences`` list."""
         return len(self.sequences)
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """Human-readable summary: config, counts and the top-N sequences."""
         pep_len = self.instructor.peptide_len + 2
         total_sequences = len(self.sequences) + len(self.discarded_sequences) + len(self.parent_sequences)
         lines = ['===== EVOLVER CURRENT STATE =====\n']
@@ -84,16 +137,21 @@ class Evolver:
         return ''.join(lines)
     
     def __iter__(self):
+        """Iterate over the active ``sequences`` list."""
         return iter(self.sequences)
     
     # files and reports ---------------------------------------------------------
-    def save_pkl(self):
+    def save_pkl(self) -> None:
+        """Persist the whole Evolver state to ``<name>.pkl``."""
         from utils import save_pkl
         save_pkl(self, self.name + '.pkl')
     
-    def report_sequences(self):
-        """
-        Write information of all sequences in a sequences_report.csv file
+    def report_sequences(self) -> None:
+        """Write every sequence to ``sequences_report.csv``.
+
+        Columns are ``sequence,generation,fitness`` (one row per sequence
+        across all three population lists). This is the same format that
+        :meth:`read_report` consumes.
         """
         with open('sequences_report.csv', 'w') as fo:
             fo.write('sequence,generation,fitness\n')
@@ -102,7 +160,20 @@ class Evolver:
                 fitness = seq.fitness
                 fo.write(f'{seq.sequence},{seq.generation},{fitness}\n')
 
-    def plot_evolution(self, show_std=False, show_kids=False):
+    def plot_evolution(self, show_std: bool = False, show_kids: bool = False) -> None:
+        """Plot fitness over generations and save it to ``evolution.png``.
+
+        Draws the running population fitness, the per-generation average,
+        best and worst fitness. Optionally overlays the standard deviation
+        on a second axis and/or scatters every individual ("kid").
+
+        Parameters
+        ----------
+        show_std : bool
+            If True, add the per-generation standard deviation on a twin axis.
+        show_kids : bool
+            If True, scatter every sequence's fitness at its generation.
+        """
         import math
         import matplotlib.pyplot as plt
 
@@ -177,7 +248,17 @@ class Evolver:
 
     # validate and find sequences ------------------------------------------------------
     def is_valid_sequence(self, seq) -> bool:
-        """Check if the sequence is valid. Returns True if it is valid."""
+        """Return True if ``seq`` is an acceptable sequence.
+
+        A sequence is rejected if it already exists and reinsertion is
+        disabled, or if it fails the generator's composition/restriction
+        checks.
+
+        Parameters
+        ----------
+        seq : str | Sequence
+            Sequence to validate.
+        """
         seq = str(seq)
         logger.debug(f'Evolver: checking validity of sequence {seq}')
 
@@ -192,25 +273,30 @@ class Evolver:
 
         return validity_value
     
-    def sequence_exists(self, seq):
+    def sequence_exists(self, seq) -> bool:
+        """Return True if ``seq`` is already present in any population list."""
         all_lists = self.sequences + self.discarded_sequences + self.parent_sequences
         if seq in all_lists:
             return True
         return False
     
     # decide and choose ----------------------------------------------------
-    def is_top_index(self, index):
-        """
-        Returns true if the index is part of the elite section 
-        ex. if elite is 2% of a population=128 sequences, then
-        elite section covers the nex indexes [0, 1] 
+    def is_top_index(self, index: int) -> bool:
+        """Return True if ``index`` falls inside the elite section.
+
+        Example: with a population of 128 and a 2% elite ratio, the elite
+        section covers indices [0, 1].
         """
         num_indexes = int(self.instructor.population * self.instructor.elite_ratio)
         return index in list(range(num_indexes))
 
-    def take_bool_decision(self, probability=0.1):
-        """
-        Take a decision based on the probability
+    def take_bool_decision(self, probability: float = 0.1) -> bool:
+        """Return True with the given ``probability`` (a coin flip).
+
+        Parameters
+        ----------
+        probability : float
+            Probability of returning True, in [0.0, 1.0].
         """
         if not 0.0 <= probability <= 1.0:
             raise ValueError("Probability should be between 0.0 and 1.0")
@@ -221,7 +307,35 @@ class Evolver:
             include_discarded=False, include_current=False,
              only_discarded=False, only_current=False,
             ):
-        """Returns a Sequence object choosen randomly with or without weights."""
+        """Pick one Sequence at random from a configurable candidate pool.
+
+        The candidate pool starts as ``parent_sequences`` and can be widened
+        (``include_*``), narrowed to a single list (``only_*``), or filtered
+        (``exception``, ``include_elite``). When ``weighted`` is True the
+        choice is biased toward better-ranked (lower-index) sequences, with
+        an extra multiplier for elites.
+
+        Parameters
+        ----------
+        weighted : bool
+            If True, weight the choice by rank instead of choosing uniformly.
+        reverse : bool
+            Only meaningful when ``weighted``; flips the bias toward the
+            worst-ranked sequences (and inverts the elite multiplier).
+        exception : Sequence | iterable[Sequence] | None
+            Sequence(s) to exclude from the pool (e.g. an already-chosen parent).
+        include_elite : bool
+            If False, drop elite sequences from the pool.
+        include_discarded, include_current : bool
+            Widen the pool with the discarded / current sequences.
+        only_discarded, only_current : bool
+            Restrict the pool to that single list (overrides the include_* widening).
+
+        Returns
+        -------
+        Sequence
+            The chosen sequence.
+        """
         # make a copy of self.sequences to avoid undesired modifications
         # population is the list from which sequence will be taken
         # as first entry: only parent sequences
@@ -278,6 +392,12 @@ class Evolver:
     
     # Populate -------------------------
     def first_sequences(self) -> None:
+        """Seed the initial population from ``instructor.sequences`` (if any).
+
+        Called once at construction. Sequences supplied in the YAML are
+        added (up to ``population``), optionally skipping those with the
+        wrong length or that fail validation when ``check_validity`` is on.
+        """
         print('Evolver: Starting sequences')
         # Create first sequences from Instructor.sequences
         if len(self.instructor.sequences) > 0:
@@ -294,7 +414,14 @@ class Evolver:
                         continue
                 self.sequences.append(Sequence(sq))
     
-    def include_sequences(self):
+    def include_sequences(self) -> None:
+        """Inject the sequences queued in ``self.to_include`` into the population.
+
+        Used by the ``--insert-sequence`` action. Each candidate is checked
+        for length and validity; if it already exists it is taken back from
+        its list and flagged for reinsertion, otherwise a new Sequence is
+        created. The queue is cleared at the end.
+        """
         for candidate in self.to_include:
             if len(self.sequences) == self.instructor.population:
                 logger.warning('Evolver: evolver is full --> skipping external insertion')
@@ -317,8 +444,18 @@ class Evolver:
         self.to_include = []
 
     def populate(self) -> None:
-        """
-        Populate self.sequences
+        """Fill ``self.sequences`` up to the target population size.
+
+        Two regimes:
+
+        * Not started yet (``self.started`` is False): generate sequences
+          from scratch (no parents) until the population is full.
+        * Started: increment the generation counter and breed offspring by
+          choosing parents with :meth:`choose_sequence` and combining them
+          with the configured generator. After breeding, the previous
+          parents are moved into ``discarded_sequences``.
+
+        Does nothing if the population is already full.
         """
         logger.debug("Start Evolver.populate()")
         # if it's already populated, do nothing
@@ -373,11 +510,15 @@ class Evolver:
             self.parent_sequences = []
 
     # methods to save and restore sequences ---------------------------------
-    def read_previous(self):
-        """
-        Reads sequences from previous simulations.
-        Sequences must be in the self.instructor.evomd_directory
-        Analysis method is needed.
+    def read_previous(self) -> None:
+        """Rebuild the population from simulations already on disk.
+
+        Scans ``instructor.evomd_directory`` for sequence folders, wraps each
+        one in a Sequence pointing at its directory, flags them for analysis,
+        runs only the analyze step (``iterate`` with an analyze-only plan),
+        drops sequences with no/NaN fitness and finally sorts the population.
+
+        Used by the ``--populate-previous`` action.
         """
         # read all the sequences in self.instructor.evomd_directory
         import os
@@ -387,6 +528,8 @@ class Evolver:
         self.sequences = []
         sequences = os.listdir(self.instructor.evomd_directory)
         for seq in sequences:
+            # NOTE: `seq` is the folder name (a str). The two checks below
+            # guard length/validity; the second references `sq` (see FIXME).
             if not self.fits_length(seq):
                 # skip if length does not fit
                 continue
@@ -414,7 +557,7 @@ class Evolver:
         logger.info(f'Evolver: {len(self.parent_sequences)} in parent sequences list')
         logger.info(f'Evolver: {len(self.discarded_sequences)} in discarded sequences list')
     
-    def read_report(self, report_path):
+    def read_report(self, report_path: str) -> None:
         """
         Initialize the evolver from a CSV report with the format produced by
         report_sequences(): 'sequence,generation,fitness'.
@@ -508,10 +651,12 @@ class Evolver:
         logger.info(f'Evolver: {len(self.parent_sequences)} in parent sequences list')
         logger.info(f'Evolver: {len(self.discarded_sequences)} in discarded sequences list')
     
-    def sequence_backup(self):
-        """
-        Creates a json file with sequence information in Sequence.directory
-        This should help in restoring optimization if evolver.pkl file is corrupted
+    def sequence_backup(self) -> None:
+        """Write a ``sequence.json`` into each sequence's directory.
+
+        A redundant, per-sequence backup that helps recover the run if the
+        main ``evolver.pkl`` gets corrupted. Creates the directory first if
+        a sequence does not have one yet.
         """
         from utils import save_json
         import os
@@ -528,19 +673,24 @@ class Evolver:
 
     # sorting and moving ----------------------------------------------------
     def sort_sequences(self) -> None:
-        """
-        Orders sequences according to self.instructor.optimize
-        if 'maximize' --> large to small (default)
-        if 'minimize' --> small to large
+        """Rank the population by fitness and split it into the three lists.
 
-        It also splits the sequences into three lists:
-        self.sequences will have only elite sequences
-        self.discarded_sequences will contain the worst sequences
-        self.parent_sequences is used to store parents before populating
+        Ordering follows ``instructor.optimize`` ('maximize' -> high-to-low,
+        the default; 'minimize' -> low-to-high). Sequences without a valid
+        fitness (None/NaN) are pushed to the end.
 
-        It also asigns the next values in Sequence objects:
-        Sequence.is_top           true if it is in elite section
-        Sequence.current_index    index in the sorted list
+        After ranking, sequences are distributed as follows:
+
+            * elite sequences        -> ``self.sequences`` (re-simulated)
+            * next best (parents)    -> ``self.parent_sequences``
+            * the rest               -> ``self.discarded_sequences``
+
+        Per-sequence flags are refreshed in the process:
+            ``is_top``        : True if inside the elite section (by rank).
+            ``is_elite``      : set via ``check_elite`` once past
+                                ``iterations_elite`` generations.
+            ``is_discarded``  : True unless kept as elite or parent.
+            ``current_index`` : position in the sorted list.
         """
         import math
         logger.info('Evolver: Sorting sequences')
@@ -601,9 +751,11 @@ class Evolver:
         
         logger.debug(f'Evolver.sort_sequences(): Number of sequences: sequences {len(self.sequences)} parent {len(self.parent_sequences)} discarded {len(self.discarded_sequences)}')
     
-    def set_failed(self):
-        """
-        move to failed_sequences is Sequence.is_failed = True
+    def set_failed(self) -> None:
+        """Move sequences flagged ``is_failed`` out of the active list.
+
+        Failed sequences are removed from ``self.sequences`` and collected
+        into ``self.failed_sequences``.
         """
         # Remove from self.sequences
         not_failed = [k for k in self.sequences if not k.is_failed]
@@ -614,8 +766,22 @@ class Evolver:
         self.failed_sequences = failed
 
     def take_sequence(self, seq):
-        """
-        This should take a sequence from the lists, remove it and return it
+        """Find ``seq`` in any population list, remove it and return it.
+
+        Searches ``discarded_sequences``, then ``parent_sequences``, then
+        ``sequences``. If found, the existing Sequence object is removed from
+        its list and returned (so it can be reinserted). If not found, the
+        run is aborted (``exit(2)``).
+
+        Parameters
+        ----------
+        seq : str | Sequence
+            The sequence to take.
+
+        Returns
+        -------
+        Sequence
+            The removed Sequence object.
         """
         seq = str(seq)
         existing_seq = None
@@ -646,9 +812,10 @@ class Evolver:
 
 
     def take_sequence_prev(self, seq):
-        """
-        Take a sequence object from self.sequences or self.discarded_sequences and remove it 
-        from those lists
+        """Older variant of :meth:`take_sequence` (kept for compatibility).
+
+        Searches only ``sequences`` and ``discarded_sequences``, removes the
+        match and returns it; returns None if not found.
         """
         seq = str(seq)
         existing_seq = None
@@ -664,7 +831,13 @@ class Evolver:
             return existing_seq
 
     # Iterate ----------------------------------------------------
-    def is_valid_plan(self, plan):
+    def is_valid_plan(self, plan) -> bool:
+        """Validate an iteration plan: a list of exactly 4 booleans.
+
+        The plan toggles the four iteration steps
+        (construct, calculate, check, analyze). Returns False if the shape
+        is wrong.
+        """
         if not isinstance(plan, list):
             logger.warning('Evolver: new plan must be a list')
             return False
@@ -675,16 +848,29 @@ class Evolver:
             logger.warning('Evolver: new plan mut contain only bool values')
         return True
 
-    def iterate(self, new_plan=None):
-        """
-        Perform one full iteration of the evolutionary cycle.
-        This includes:
-            1. Constructing systems for each sequence.
-            2. Running simulations.
-            3. Monitoring simulation completion.
-            4. Analyzing results and computing fitness.
-            5. Applying penalties (if defined).
-            6. Marking failed simulations.
+    def iterate(self, new_plan=None) -> None:
+        """Run one full pass of the evolutionary cycle.
+
+        Steps (each can be toggled via an iteration plan):
+            1. construct : build the system / input files for each sequence.
+            2. calculate : submit / run the simulations.
+            3. check     : monitor simulation status.
+            4. analyze   : read results and compute fitness.
+        After the plan runs, failed sequences are moved aside
+        (:meth:`set_failed`).
+
+        Behaviour notes:
+            * If ``recover_enabled`` is set, the first call resumes pending
+              sequences from an interrupted session and clears the flag.
+            * Otherwise, if ``new_plan`` is given (a 4-bool list validated by
+              :meth:`is_valid_plan`), it overrides which steps run; e.g.
+              ``[False, False, False, True]`` runs only the analyze step.
+            * Each completed step saves the pickle unless ``fast_cycle``.
+
+        Parameters
+        ----------
+        new_plan : list[bool] | None
+            Optional [construct, calculate, check, analyze] toggle list.
         """
         logger.info("Evolver: Starting iteration step")
 
@@ -760,14 +946,23 @@ class Evolver:
         logger.info("Evolver: Iteration step completed")
 
     # Convergence or max generations? -----------------------------
-    def check_termination(self):
-        """
-        Evaluate termination conditions. If met, set self.runnable = False.
-        
-        Criteria:
-            - Manual stop via stop_evolver
-            - Convergence (e.g., stable elite set or fitness variance below threshold)
-            - Max generations (optional future criterion)
+    def check_termination(self) -> None:
+        """Stop the run if a termination criterion is met (sets ``runnable``).
+
+        Two criteria are evaluated (both read from the input YAML; each is
+        skipped when left as None):
+
+            * ``max_generations`` : stop once ``generations`` reaches it.
+            * ``target_fitness``  : stop once the target fitness is reached.
+
+        A manual stop is handled separately by the ``--stop-evolver`` action,
+        which sets ``runnable = False`` directly.
+
+        Note
+        ----
+        The ``target_fitness`` check inspects ``discarded_sequences[0]`` and
+        assumes 'maximize'; it can raise IndexError if that list is empty and
+        does not account for 'minimize'. Left as-is here (documentation pass).
         """
         logger.info("Evolver: Checking termination criteria")
 
