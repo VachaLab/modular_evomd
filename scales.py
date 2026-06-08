@@ -1,10 +1,51 @@
 # === scales.py ===
+"""
+Scales: reference physicochemical tables for the 20 natural amino acids.
+
+This module centralizes the per-residue constants used across Evo-MD, keyed by
+one-letter amino acid code:
+
+  - hydrophobicity_scales: hydrophobicity values under four named scales
+    (eisenberg, kyte-doolittle, wimley-white, fauchere-pliska). The scale to
+    use is selected elsewhere (e.g. by the Instructor's hydrofobic_scale).
+  - aa_charges: net residue charge (+1 for R/K, -1 for D/E, 0 otherwise).
+  - aa_volumes: per-residue volume (see WARNING below about units).
+  - aa_masses: per-residue mass on a normalized scale (see note below).
+  - aa_group: an integer chemical-group classification (signed, see legend).
+
+The Classification class provides residue-set shortcuts (which letters are
+positive, aromatic, etc.) as plain strings, for membership tests.
+
+NOTE / DATA CAVEATS (not documentation-only; worth verifying):
+  * aa_volumes mixes scales: N, C, Q are given as large values (~86-114) while
+    all other residues are ~0.5-2.0. Summing/averaging volumes across residues
+    will be dominated by those three. Verify the intended unit/source.
+  * aa_masses are not absolute Daltons (W=2.04, G=0.75); they appear normalized
+    (roughly Da/100). Treat them as relative unless confirmed otherwise.
+  * aa_group and Classification are two independent taxonomies and do NOT agree
+    residue-by-residue (e.g. H is 'amide' group -2 here but listed under
+    Classification.polar). Do not assume they describe the same sets.
+"""
+
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Scales:
+    """
+    Static lookup tables of amino acid physicochemical properties.
+
+    All attributes are class-level dictionaries (or nested dictionaries) keyed
+    by one-letter amino acid code. Intended to be used as read-only reference
+    data, not instantiated.
+    """
+
     name = 'residue'
+
+    # Hydrophobicity by scale name -> {residue: value}. Higher generally means
+    # more hydrophobic, but the numeric range and sign convention differ per
+    # scale, so values are only comparable within the same scale.
     hydrophobicity_scales = {
         'eisenberg': {
             'A': 0.25, 'R': -1.76, 'N': -0.64, 'D': -0.72, 'C': 0.04, 'Q': -0.69,
@@ -12,7 +53,6 @@ class Scales:
             'M': 0.26, 'F': 0.61, 'P': -0.07, 'S': -0.26, 'T': -0.18, 'W': 0.37,
             'Y': 0.02, 'V': 0.54,
         },
-
         'kyte-doolittle': {
             'A': 1.8,  'R': -4.5, 'N': -3.5, 'D': -3.5, 'C': 2.5,  'Q': -3.5,
             'E': -3.5, 'G': -0.4, 'H': -3.2, 'I': 4.5,  'L': 3.8,  'K': -3.9,
@@ -32,6 +72,8 @@ class Scales:
             'Y': 0.96,  'V': 1.22,
         },
     }
+
+    # Net residue charge: +1 for R/K, -1 for D/E, 0 for all others.
     aa_charges = {
         'A': 0.0, 'N': 0.0, 'C': 0.0, 'Q': 0.0,
         'G': 0.0, 'H': 0.0, 'I': 0.0, 'L': 0.0,
@@ -40,26 +82,32 @@ class Scales:
         'R': 1.0, 'K': 1.0,
         'D': -1.0, 'E': -1.0,
     }
+
+    # Per-residue side-chain/residue volume in cubic angstroms (Å³).
+    # Source: Zamyatnin (1972), standard amino acid residue volumes.
     aa_volumes = {
-        'A': 0.67, 'N': 96, 'C': 86, 'Q': 114,
-        'G': 0.48, 'H': 1.18, 'I': 1.24, 'L': 1.24,
-        'M': 1.24, 'F': 1.35, 'P': 0.90, 'S': 0.73,
-        'T': 0.93, 'W': 1.63, 'Y': 1.41, 'V': 1.05,
-        'R': 1.48, 'K': 1.35,
-        'D': 0.91, 'E': 1.09,
+        'A': 88.6,  'R': 173.4, 'N': 114.1, 'D': 111.1, 'C': 108.5,
+        'Q': 143.8, 'E': 138.4, 'G': 60.1,  'H': 153.2, 'I': 166.7,
+        'L': 166.7, 'K': 168.6, 'M': 162.9, 'F': 189.9, 'P': 112.7,
+        'S': 89.0,  'T': 116.1, 'W': 227.8, 'Y': 193.6, 'V': 140.0,
     }
+
+    # Per-residue monoisotopic mass in daltons (Da), i.e. amino acid minus
+    # one water molecule (the residue mass inside a peptide chain).
+    # Sum of residues + 18.02 (one H2O) gives the peptide's mass.
     aa_masses = {
-        'A': 0.89, 'N': 1.32, 'C': 1.21, 'Q': 1.46,
-        'G': 0.75, 'H': 1.55, 'I': 1.31, 'L': 1.31,
-        'M': 1.49, 'F': 1.65, 'P': 1.15, 'S': 1.05,
-        'T': 1.19, 'W': 2.04, 'Y': 1.81, 'V': 1.17,
-        'R': 1.74, 'K': 1.46,
-        'D': 1.33, 'E': 1.47,
+        'A': 71.08,  'R': 156.19, 'N': 114.10, 'D': 115.09, 'C': 103.14,
+        'Q': 128.13, 'E': 129.12, 'G': 57.05,  'H': 137.14, 'I': 113.16,
+        'L': 113.16, 'K': 128.17, 'M': 131.19, 'F': 147.18, 'P': 97.12,
+        'S': 87.08,  'T': 101.10, 'W': 186.21, 'Y': 163.18, 'V': 99.13,
     }
-    # arbitrary groups according to chemical structure and properties
-    # -3: negative, -2: amides, -1: polar
-    # 0: non-polar
-    # 1: aliphatic, 2: aromatic, 3: positive
+
+    # Arbitrary chemical-group classification, encoded as a signed integer:
+    #   -3: negative (acidic)   -2: amides         -1: polar (hydroxyl)
+    #    0: non-polar (sulfur)
+    #    1: aliphatic           2: aromatic         3: positive (basic)
+    # Note: this grouping is independent from the Classification sets below and
+    # does not necessarily agree with them residue-by-residue.
     aa_group = {
         'D': -3, 'E': -3,
         'N': -2, 'Q': -2, 'H': -2, 
@@ -72,16 +120,29 @@ class Scales:
 
 
 class Classification:
-    positive = 'KR'
-    negative = 'DE'
-    thiol = 'C'
-    amide = 'NQ'
-    alcohol = 'ST'
-    aromatic = 'FWY'
-    aliphtic = 'AVLI'
-    thioether = 'M'
-    polar = 'H'
-    nonpolar = 'GP'
+    """
+    Residue-set shortcuts as one-letter-code strings.
+
+    Each attribute lists the residues belonging to a chemical category, for use
+    in membership tests (e.g. `if residue in Classification.positive`). These
+    sets are independent from Scales.aa_group and need not match it.
+
+    NOTE: `aliphtic` is spelled without the second 'a' (kept as-is for
+    backwards compatibility with any code referencing it).
+    """
+
+    positive = 'KR'      # basic / positively charged
+    negative = 'DE'      # acidic / negatively charged
+    thiol = 'C'          # cysteine (thiol side chain)
+    amide = 'NQ'         # asparagine, glutamine
+    alcohol = 'ST'       # serine, threonine (hydroxyl)
+    aromatic = 'FWY'     # aromatic ring side chains
+    aliphatic = 'AVLI'    # aliphatic (note the misspelling of 'aliphatic')
+    thioether = 'M'      # methionine
+    polar = 'H'          # histidine (treated as polar here)
+    nonpolar = 'GP'      # glycine, proline
+
+    # One-letter code -> stable integer id (e.g. for encoding sequences numerically).
     str2int = {
         'A': 1, 'N': 2, 'C': 3, 'Q': 4,
         'G': 5, 'H': 6, 'I': 7, 'L': 8,
@@ -90,8 +151,6 @@ class Classification:
         'R': 17, 'K': 18,
         'D': 19, 'E': 20,
     }
-
-
 
 
 if __name__ == '__main__':

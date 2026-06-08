@@ -1,4 +1,30 @@
 # === generator.py ===
+"""
+Generator: orchestrates candidate sequence creation for the Evolver.
+
+The Generator is the single object the Evolver asks for new sequences. It owns
+a set of GenMethod instances (the configured generation strategies), picks one
+per call according to weights, optionally applies an extra point mutation, and
+validates every candidate against the registered Restriction objects before
+returning it.
+
+Two built-in methods live here and are used implicitly:
+  - _RandomInitial: builds a sequence from scratch (ignores both parents). Used
+    for the first population fill and as the default no-parent fallback.
+  - _RandomMutation: replaces exactly one position; used only as the optional
+    extra-mutation step after the main method.
+
+Parent handling in generate():
+  - No parents -> always _RandomInitial, regardless of configured methods.
+  - One or more parents -> a configured method is chosen by weight, after
+    filtering out methods whose expected_parents cannot be met.
+
+Shared resources (aa_pool, peptide_len) live on the Generator and are reached by
+each GenMethod through a back-reference injected at registration. Candidate
+validation loops until a sequence passes all restrictions or max_attempts is
+hit, in which case a RuntimeError is raised.
+"""
+
 from __future__ import annotations
 import logging
 import random
@@ -23,12 +49,13 @@ class _RandomInitial(GenMethod):
     population fill.
 
     Both parents are ignored. A full-length sequence is built by drawing
-    residues uniformly at random from the Generator amino acid pool.
-    The target length is resolved from Generator.peptide_len on each call.
+    residues uniformly at random from the Generator amino acid pool. The target
+    length is resolved from Generator.peptide_len on each call.
     """
     method_name = 'RANDOM'
 
     def generate(self, seq1: Sequence = None, seq2: Sequence = None, verbose=False) -> str:
+        """Build a random sequence of the generator's target length, ignoring parents."""
         pool = self.generator.aa_pool
         length = self.generator.peptide_len
 
@@ -56,16 +83,17 @@ class _RandomMutation(GenMethod):
     Built-in single-position point mutation method.
 
     Used exclusively as the extra mutation step applied after the main
-    generation method. Takes seq1, selects one position at random, and
-    replaces it with a residue drawn from the Generator amino acid pool.
-    seq2 is always ignored.
+    generation method. Takes seq1, selects one position at random, and replaces
+    it with a residue drawn from the Generator amino acid pool. seq2 is always
+    ignored.
 
-    Always mutates exactly one position. Never rebuilds the sequence
-    from scratch.
+    Always mutates exactly one position. Never rebuilds the sequence from
+    scratch.
     """
     method_name = 'RAND_MUT'
 
     def generate(self, seq1: Sequence, seq2: Sequence = None, verbose=False) -> str:
+        """Return seq1 with exactly one randomly chosen position replaced."""
         pool = self.generator.aa_pool
         seq_str = str(seq1)
         length = len(seq_str)
@@ -93,10 +121,10 @@ class Generator:
     """
     Orchestrates the creation of candidate sequences for Evolver.
 
-    Generator holds one or more GenMethod instances and selects among them
-    on each generation call. It enforces sequence validity through an optional
-    list of Restriction objects and applies an optional extra point mutation
-    after the main generation step.
+    Generator holds one or more GenMethod instances and selects among them on
+    each generation call. It enforces sequence validity through an optional list
+    of Restriction objects and applies an optional extra point mutation after
+    the main generation step.
 
     Resources shared with GenMethod instances (aa_pool, peptide_len) are
     accessed by those instances through a back-reference to this Generator,
@@ -127,6 +155,9 @@ class Generator:
     restrictions : list[Restriction] | None
         Sequence validity constraints tested inside the generation loop.
         A candidate is accepted only when all restrictions pass.
+    initial_method : GenMethod | None
+        Method used when generate() is called without parents. Defaults to the
+        built-in _RandomInitial.
     """
 
     def __init__(
@@ -155,7 +186,7 @@ class Generator:
             methods = [methods]
         self.methods: list[GenMethod] = methods
 
-        # Validate and normalize weights.
+        # Validate and normalize weights (one per method).
         if weights is None:
             weights = [1.0] * len(self.methods)
         if len(weights) != len(self.methods):
@@ -188,7 +219,7 @@ class Generator:
             restrictions = [restrictions]
         self.restrictions: list[Restriction] = restrictions
 
-        # Inject generator reference into all registered methods.
+        # Inject this Generator into every method so they can reach shared state.
         self._register_method(self._initial_fallback)
         for method in self.methods:
             self._register_method(method)
@@ -197,7 +228,7 @@ class Generator:
     # Registration ----------------------------------------------------------
 
     def _register_method(self, method: GenMethod) -> None:
-        """Injects a back-reference to this Generator into a GenMethod instance."""
+        """Inject a back-reference to this Generator into a GenMethod instance."""
         method.generator = self
 
     def add_method(
@@ -206,8 +237,10 @@ class Generator:
         weight: float = 1.0,
     ) -> None:
         """
-        Registers an additional generation method after construction.
-        Injects the Generator reference automatically.
+        Register an additional generation method after construction.
+
+        Injects the Generator reference automatically and appends the method
+        with its selection weight.
         """
         self._register_method(method)
         self.methods.append(method)
@@ -215,7 +248,7 @@ class Generator:
         logger.info(f"Generator: method {method} added with weight {weight}.")
 
     def add_restriction(self, restriction: Restriction) -> None:
-        """Registers an additional Restriction after construction."""
+        """Register an additional Restriction after construction."""
         self.restrictions.append(restriction)
         logger.info(f"Generator: restriction {restriction} added.")
 
@@ -223,9 +256,11 @@ class Generator:
 
     def _resolve_length(self) -> int | None:
         """
-        Returns the target sequence length for the current call.
-        Draws uniformly from the range when peptide_len is a tuple.
-        Returns None when no length constraint is configured.
+        Return the target sequence length for the current call.
+
+        Draws uniformly from the range when peptide_len is a tuple; returns the
+        fixed value when it is an int; returns None when no length constraint is
+        configured.
         """
         if self.peptide_len is None:
             return None
@@ -237,8 +272,10 @@ class Generator:
 
     def _passes_restrictions(self, seq: str, verbose=False) -> bool:
         """
-        Returns True when seq satisfies all registered Restriction instances.
-        Logs the failure reason at DEBUG level when a restriction is not met.
+        Return True when seq satisfies every registered Restriction.
+
+        Stops at the first failing restriction, logging the reason at DEBUG
+        level (and printing it when verbose).
         """
         if verbose:
             print("--- Checking restrictions ---")
@@ -258,17 +295,16 @@ class Generator:
     # Core generation -------------------------------------------------------
 
     def _select_method(self) -> GenMethod:
-        """Selects one GenMethod from self.methods according to self.weights."""
+        """Select one GenMethod from self.methods according to self.weights."""
         return random.choices(self.methods, weights=self.weights, k=1)[0]
 
     def _apply_extra_mutation(self, seq: str, verbose=False) -> str:
         """
-        Applies a single-position random mutation with probability
-        extra_mutation_prob. Returns the sequence unchanged if the
-        mutation is not applied.
+        Apply a single-position random mutation with probability
+        extra_mutation_prob, returning the sequence unchanged otherwise.
 
-        Passes the candidate string wrapped as a minimal object to
-        _RandomMutation, which only reads str(seq1) and len(seq1).
+        The candidate string is wrapped in a minimal _StrAdapter before being
+        passed to _RandomMutation, which only reads str(seq1) and len(seq1).
         """
         if random.random() < self.extra_mutation_prob:
             mutated = self._point_mutator.generate(
@@ -284,7 +320,7 @@ class Generator:
 
     def generate(self, seq1: Sequence = None, seq2: Sequence = None, max_attempts: int = 10000, verbose=False) -> str:
         """
-        Produces a valid candidate sequence string.
+        Produce a valid candidate sequence string.
 
         Behavior depends on the parents provided:
 
@@ -311,6 +347,10 @@ class Generator:
         seq2 : Sequence, optional
             Second parent. May be None or equal to seq1 when only one
             individual is available.
+        max_attempts : int
+            Maximum number of generate-and-validate attempts before giving up.
+        verbose : bool
+            If True, print a trace of each method and restriction check.
 
         Returns
         -------

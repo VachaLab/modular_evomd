@@ -1,4 +1,27 @@
 # === restriction.py ===
+"""
+Restriction: pluggable sequence-validity constraints for the Generator.
+
+A Restriction encapsulates one rule a candidate sequence must satisfy. The
+Generator holds a list of them and, inside its generation loop, accepts a
+candidate only when every restriction's test() returns True.
+
+The module provides the abstract base class plus a set of built-in
+restrictions:
+  - CompositionRestriction: bounds the count of residues from a given set.
+  - HdistributionRestriction: bounds the hydrophobicity alternation index.
+  - PatternRestriction: rejects forbidden substrings / regex patterns.
+  - ChargeRestriction: bounds the net charge.
+  - HindexRestriction: bounds the hydrophobic index.
+  - HmomentRestriction: bounds the hydrophobic moment.
+  - ForbiddenSequence: rejects exact full-sequence matches.
+
+Each test() updates self.message with a human-readable outcome; the Generator
+only emits it at DEBUG level, so there is no overhead in normal operation.
+Restrictions that need physicochemical values import Scales (or
+sequence_geometry) lazily to avoid circular imports at module load time.
+"""
+
 from __future__ import annotations
 from sequence import Sequence
 import logging
@@ -30,12 +53,13 @@ class Restriction:
 
     def test(self, seq: str, verbose=False) -> bool:
         """
-        Evaluates whether seq satisfies this restriction.
+        Evaluate whether seq satisfies this restriction.
 
-        Returns True if the sequence is accepted, False if rejected.
-        Updates self.message with a description of the outcome.
+        Returns True if the sequence is accepted, False if rejected, and
+        updates self.message with a description of the outcome.
 
-        Raises NotImplementedError if not overridden by a subclass.
+        Raises:
+            NotImplementedError: If not overridden by a subclass.
         """
         raise NotImplementedError(
             f"{self.__class__.__name__} must implement test()."
@@ -44,14 +68,16 @@ class Restriction:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}()"
 
-    def _as_sequence(self, seq: Sequence | str) -> Sequence:
+    def _as_sequence(self, seq: Sequence | str, h_scale: str = 'eisenberg') -> Sequence:
         """
-        Returns a Sequence object. Instantiates one only when the input
-        is a plain string, avoiding redundant construction otherwise.
+        Return a Sequence object for the input.
+
+        Instantiates a new Sequence only when given a plain string, avoiding
+        redundant construction when a Sequence is already provided.
         """
         if isinstance(seq, Sequence):
             return seq
-        return Sequence(str(seq))
+        return Sequence(str(seq), h_scale=h_scale)
 
 
 # ---------------------------------------------------------------------------
@@ -71,9 +97,9 @@ class CompositionRestriction(Restriction):
     residues : str
         String of single-letter amino acid codes defining the target set.
         Case-insensitive.
-    min_count : int
+    min : int
         Minimum number of residues from the set required. Default 0.
-    max_count : int | None
+    max : int | None
         Maximum number of residues from the set allowed. None means no
         upper bound.
     """
@@ -96,6 +122,7 @@ class CompositionRestriction(Restriction):
             )
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True if the count of target residues is within [min, max]."""
         count = sum(1 for aa in seq.upper() if aa in self._residues)
         above_min = count >= self._min
         below_max = self._max is None or count <= self._max
@@ -130,20 +157,22 @@ class CompositionRestriction(Restriction):
 
 class HdistributionRestriction(Restriction):
     """
-    Acepta secuencias cuya distribución de hidrofobicidad (índice de alternancia)
-    cae dentro de un rango especificado.
+    Accepts sequences whose hydrophobicity distribution (alternation index)
+    falls within a specified range.
 
-    El índice se calcula como el promedio de las diferencias absolutas de 
-    hidrofobicidad entre residuos adyacentes usando la escala de Eisenberg.
-    Residuos no presentes en la escala se tratan como neutros (0.0) y se 
-    registra una advertencia.
+    The index is computed as the mean of the absolute hydrophobicity
+    differences between adjacent residues, using the selected scale (Eisenberg
+    by default). Residues absent from the scale are treated as neutral (0.0)
+    and a warning is logged.
 
     Parameters
     ----------
     min : float | None
-        Índice de alternancia mínimo aceptado (inclusivo). None significa sin límite inferior.
+        Minimum accepted alternation index (inclusive). None means no lower bound.
     max : float | None
-        Índice de alternancia máximo aceptado (inclusivo). None significa sin límite superior.
+        Maximum accepted alternation index (inclusive). None means no upper bound.
+    h_scale : str
+        Name of the hydrophobicity scale used for the per-residue values.
     """
 
     def __init__(
@@ -179,7 +208,8 @@ class HdistributionRestriction(Restriction):
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
-        # 1. Convertir la secuencia a valores numéricos y manejar residuos desconocidos
+        """Return True if the mean adjacent-residue hydrophobicity difference is within [min, max]."""
+        # 1. Map the sequence to numeric values, handling unknown residues.
         valores = []
         for aa in seq.upper():
             if aa not in self._hi_table:
@@ -188,20 +218,20 @@ class HdistributionRestriction(Restriction):
                 )
             valores.append(self._hi_table.get(aa, 0.0))
 
-        # 2. Calcular el índice de distribución (alternancia)
+        # 2. Compute the alternation (distribution) index.
         if len(valores) < 2:
-            dist_index = 0.0  # Si la secuencia tiene 0 o 1 aminoácido, la diferencia es 0
+            dist_index = 0.0  # 0 or 1 residue -> no adjacent difference
         else:
             diferencias = [abs(valores[i+1] - valores[i]) for i in range(len(valores)-1)]
             dist_index = sum(diferencias) / len(diferencias)
 
-        # 3. Evaluar contra los límites min y max
+        # 3. Evaluate against the min/max bounds.
         above_min = self._min is None or dist_index >= self._min
         below_max = self._max is None or dist_index <= self._max
 
         passed = above_min and below_max
 
-        # 4. Imprimir resultados si es verbose
+        # 4. Report when verbose.
         if verbose:
             bound_str = f"[{self._min}, {self._max}]"
             print(f"Hdistribution restriction: {bound_str} Current: {dist_index:.4f} = Pass: {passed}")
@@ -245,6 +275,7 @@ class PatternRestriction(Restriction):
                 self._plain.append(p.upper())
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True only if no forbidden substring or regex pattern is present."""
         seq_upper = seq.upper()
 
         passed = True
@@ -322,6 +353,7 @@ class ChargeRestriction(Restriction):
         self._charge_table: dict[str, float] = Scales.aa_charges
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True if the summed net charge is within [min, max]."""
         charge = 0.0
         for aa in seq.upper():
             if aa not in self._charge_table:
@@ -350,11 +382,11 @@ class ChargeRestriction(Restriction):
         
 class HindexRestriction(Restriction):
     """
-    Accepts sequences whose net charge falls within a specified range.
+    Accepts sequences whose hydrophobic index falls within a specified range.
 
-    Hydrophobic index is computed as the sum of per-residue hydrophobic moments using the values
-    defined in Scales.hydrophobicity_scales["eisenberg"]. Residues not present in the scale are
-    treated as zero (0.0) and a warning is logged.
+    The hydrophobic index is computed by sequence_geometry.compute_hi over a
+    Sequence built from the candidate, using the per-residue hydrophobicity
+    values of the selected scale.
 
     Parameters
     ----------
@@ -362,6 +394,8 @@ class HindexRestriction(Restriction):
         Minimum accepted hydrophobic index (inclusive). None means no lower bound.
     max : float | None
         Maximum accepted hydrophobic index (inclusive). None means no upper bound.
+    h_scale : str
+        Name of the hydrophobicity scale used for the per-residue values.
     """
 
     def __init__(
@@ -374,7 +408,7 @@ class HindexRestriction(Restriction):
 
         if min is None and max is None:
             raise ValueError(
-                "ChargeRestriction requires at least one of "
+                "HindexRestriction requires at least one of "
                 "'min' or 'max'."
             )
         self._min: Optional[float] = min
@@ -397,8 +431,9 @@ class HindexRestriction(Restriction):
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True if the computed hydrophobic index is within [min, max]."""
         from sequence_geometry import compute_hi
-        test_seq = Sequence(seq)
+        test_seq = Sequence(seq, h_scale=self.h_scale)
         hindex = compute_hi(test_seq)
         above_min = self._min is None or hindex >= self._min
         below_max = self._max is None or hindex <= self._max
@@ -422,14 +457,19 @@ class HmomentRestriction(Restriction):
     """
     Accepts sequences whose hydrophobic moment falls within a specified range.
 
-    Hydrophobic moment is computed as described in Faraday Symp. Chem. Soc., 1982, 17,109-120.
+    The hydrophobic moment is computed as described in
+    Faraday Symp. Chem. Soc., 1982, 17, 109-120, via
+    sequence_geometry.compute_hm_scalar over the helix positions of the
+    candidate sequence.
 
     Parameters
     ----------
     min : float | None
-        Minimum accepted hydrophobic index (inclusive). None means no lower bound.
+        Minimum accepted hydrophobic moment (inclusive). None means no lower bound.
     max : float | None
-        Maximum accepted hydrophobic index (inclusive). None means no upper bound.
+        Maximum accepted hydrophobic moment (inclusive). None means no upper bound.
+    h_scale : str
+        Name of the hydrophobicity scale used for the per-residue values.
     """
 
     def __init__(
@@ -442,7 +482,7 @@ class HmomentRestriction(Restriction):
 
         if min is None and max is None:
             raise ValueError(
-                "ChargeRestriction requires at least one of "
+                "HmomentRestriction requires at least one of "
                 "'min' or 'max'."
             )
         self._min: Optional[float] = min
@@ -454,7 +494,7 @@ class HmomentRestriction(Restriction):
             and self._min > self._max
         ):
             raise ValueError(
-                f"ChargeRestriction: min ({self._min}) must be "
+                f"HmomentRestriction: min ({self._min}) must be "
                 f"<= max ({self._max})."
             )
 
@@ -465,8 +505,9 @@ class HmomentRestriction(Restriction):
         self._hi_table: dict[str, float] = Scales.hydrophobicity_scales[self.h_scale]
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True if the computed hydrophobic moment is within [min, max]."""
         from sequence_geometry import compute_helix_positions, compute_hm_scalar
-        seq = self._as_sequence(seq)
+        seq = self._as_sequence(seq, h_scale=self.h_scale)
         
         positions = compute_helix_positions(seq, translate=False)
         hm_scalar = compute_hm_scalar(seq, positions)
@@ -487,6 +528,7 @@ class HmomentRestriction(Restriction):
             f"HmomentRestriction(min={self._min}, "
             f"max={self._max})"
         )
+
 
 class ForbiddenSequence(Restriction):
     """
@@ -514,6 +556,7 @@ class ForbiddenSequence(Restriction):
         )
 
     def test(self, seq: str, verbose=False) -> bool:
+        """Return True only if the full candidate is not in the forbidden set."""
         candidate = str(seq).upper()
         passed = candidate not in self._forbidden
 
@@ -529,3 +572,6 @@ class ForbiddenSequence(Restriction):
 
     def __repr__(self) -> str:
         return f"ForbiddenSequence(n={len(self._forbidden)})"
+
+if __name__ == '__main__':
+    pass
