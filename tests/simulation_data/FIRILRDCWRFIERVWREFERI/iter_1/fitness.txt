@@ -1,3 +1,0 @@
-seq: FIRILRDCWRFIERVWREFERI
-hm: 14.0325
-charge: 2.0

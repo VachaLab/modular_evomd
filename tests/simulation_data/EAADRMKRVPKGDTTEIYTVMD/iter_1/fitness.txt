@@ -1,3 +1,0 @@
-seq: EAADRMKRVPKGDTTEIYTVMD
-hm: 6.3066
-charge: -1.0

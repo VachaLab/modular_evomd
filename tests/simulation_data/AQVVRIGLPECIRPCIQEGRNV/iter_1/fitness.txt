@@ -1,3 +1,0 @@
-seq: AQVVRIGLPECIRPCIQEGRNV
-hm: 5.7426
-charge: 1.0

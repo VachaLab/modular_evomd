@@ -1,3 +1,0 @@
-seq: MIRILRDFSRPMERGWREFERI
-hm: 13.2563
-charge: 2.0

@@ -1,3 +1,0 @@
-seq: PGFHMVRILVWMMNKILDCMFS
-hm: 5.5362
-charge: 1.0

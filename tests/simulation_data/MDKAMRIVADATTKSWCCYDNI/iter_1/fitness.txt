@@ -1,3 +1,0 @@
-seq: MDKAMRIVADATTKSWCCYDNI
-hm: 6.3684
-charge: 0.0

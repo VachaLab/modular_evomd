@@ -1,3 +1,0 @@
-seq: PTRCARNMRKVEHTHPQWKKKW
-hm: 6.5157
-charge: 6.0

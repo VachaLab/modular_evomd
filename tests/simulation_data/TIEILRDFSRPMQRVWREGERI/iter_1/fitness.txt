@@ -1,3 +1,0 @@
-seq: TIEILRDFSRPMQRVWREGERI
-hm: 11.6191
-charge: 1.0

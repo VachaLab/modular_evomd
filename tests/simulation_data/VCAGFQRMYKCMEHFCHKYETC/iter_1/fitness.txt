@@ -1,3 +1,0 @@
-seq: VCAGFQRMYKCMEHFCHKYETC
-hm: 5.9244
-charge: 1.0

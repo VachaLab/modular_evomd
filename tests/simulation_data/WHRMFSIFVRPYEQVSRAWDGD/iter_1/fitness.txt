@@ -1,3 +1,0 @@
-seq: WHRMFSIFVRPYEQVSRAWDGD
-hm: 7.8574
-charge: 0.0

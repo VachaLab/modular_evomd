@@ -1,3 +1,0 @@
-seq: DDWADQQEQLFRRQVRWPYPHW
-hm: 6.387
-charge: -1.0

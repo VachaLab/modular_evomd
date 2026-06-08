@@ -1,3 +1,0 @@
-seq: DMILRDMSSIMFRVSDFMRCMY
-hm: 7.1836
-charge: 0.0

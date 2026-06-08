@@ -1,3 +1,0 @@
-seq: LTPPIDPCVHLTNRMSNYVHEC
-hm: 5.7508
-charge: -1.0

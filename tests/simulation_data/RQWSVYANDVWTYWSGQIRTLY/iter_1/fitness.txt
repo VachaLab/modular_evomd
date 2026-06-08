@@ -1,3 +1,0 @@
-seq: RQWSVYANDVWTYWSGQIRTLY
-hm: 5.9242
-charge: 1.0

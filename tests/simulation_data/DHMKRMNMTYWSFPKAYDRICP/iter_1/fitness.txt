@@ -1,3 +1,0 @@
-seq: DHMKRMNMTYWSFPKAYDRICP
-hm: 5.9518
-charge: 2.0

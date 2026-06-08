@@ -1,3 +1,0 @@
-seq: WYQTTKGMICLTKSSNRTCRAW
-hm: 5.8388
-charge: 4.0

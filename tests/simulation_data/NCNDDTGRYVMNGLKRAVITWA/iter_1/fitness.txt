@@ -1,3 +1,0 @@
-seq: NCNDDTGRYVMNGLKRAVITWA
-hm: 5.8877
-charge: 1.0

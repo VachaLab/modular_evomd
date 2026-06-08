@@ -1,3 +1,0 @@
-seq: THRMLGRFVRYMQQGWREGERI
-hm: 10.8863
-charge: 3.0

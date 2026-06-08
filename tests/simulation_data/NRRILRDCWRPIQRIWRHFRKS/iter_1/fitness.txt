@@ -1,3 +1,0 @@
-seq: NRRILRDCWRPIQRIWRHFRKS
-hm: 12.5123
-charge: 7.0

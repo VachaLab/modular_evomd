@@ -1,3 +1,0 @@
-seq: NEIRMWGRCVNFIGQRIENWTP
-hm: 7.7284
-charge: 1.0

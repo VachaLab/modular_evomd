@@ -1,3 +1,0 @@
-seq: SGWQWHARFTKESDRISYYFFS
-hm: 6.0882
-charge: 1.0

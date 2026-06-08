@@ -1,3 +1,0 @@
-seq: TIEPYRYCWNFIEQGWREGERI
-hm: 8.3479
-charge: -1.0

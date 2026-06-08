@@ -1,3 +1,0 @@
-seq: DMILRDMSSIFEWEVDFMERIY
-hm: 7.3873
-charge: -4.0

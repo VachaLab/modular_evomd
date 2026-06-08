@@ -1,3 +1,0 @@
-seq: MIRALRDCWRFIERVWREFRRI
-hm: 13.6353
-charge: 4.0

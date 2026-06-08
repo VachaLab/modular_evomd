@@ -1,3 +1,0 @@
-seq: RDEWRQICKCHYNDAKEWIKFS
-hm: 6.6515
-charge: 1.0
