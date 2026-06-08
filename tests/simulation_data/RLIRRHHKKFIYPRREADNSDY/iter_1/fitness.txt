@@ -1,0 +1,3 @@
+seq: RLIRRHHKKFIYPRREADNSDY
+hm: 6.4876
+charge: 4.0

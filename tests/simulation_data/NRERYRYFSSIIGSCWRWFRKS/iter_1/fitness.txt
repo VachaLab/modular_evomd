@@ -1,0 +1,3 @@
+seq: NRERYRYFSSIIGSCWRWFRKS
+hm: 7.036
+charge: 5.0

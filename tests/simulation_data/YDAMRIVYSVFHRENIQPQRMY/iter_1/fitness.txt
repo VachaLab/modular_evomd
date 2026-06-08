@@ -1,0 +1,3 @@
+seq: YDAMRIVYSVFHRENIQPQRMY
+hm: 5.5081
+charge: 1.0

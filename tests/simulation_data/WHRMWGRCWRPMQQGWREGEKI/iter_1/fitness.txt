@@ -1,0 +1,3 @@
+seq: WHRMWGRCWRPMQQGWREGEKI
+hm: 10.0888
+charge: 3.0

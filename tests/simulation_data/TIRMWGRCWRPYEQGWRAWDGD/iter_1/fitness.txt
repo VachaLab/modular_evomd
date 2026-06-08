@@ -1,0 +1,3 @@
+seq: TIRMWGRCWRPYEQGWRAWDGD
+hm: 7.561
+charge: 1.0

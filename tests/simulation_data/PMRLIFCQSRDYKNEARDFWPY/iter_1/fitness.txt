@@ -1,0 +1,3 @@
+seq: PMRLIFCQSRDYKNEARDFWPY
+hm: 6.422
+charge: 1.0

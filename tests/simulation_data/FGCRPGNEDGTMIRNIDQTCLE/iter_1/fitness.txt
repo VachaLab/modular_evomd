@@ -1,0 +1,3 @@
+seq: FGCRPGNEDGTMIRNIDQTCLE
+hm: 5.6879
+charge: -2.0

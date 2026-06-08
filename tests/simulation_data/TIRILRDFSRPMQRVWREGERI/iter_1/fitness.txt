@@ -1,0 +1,3 @@
+seq: TIRILRDFSRPMQRVWREGERI
+hm: 12.6868
+charge: 3.0

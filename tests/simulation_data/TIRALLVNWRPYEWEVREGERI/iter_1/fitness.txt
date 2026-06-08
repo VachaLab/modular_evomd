@@ -1,0 +1,3 @@
+seq: TIRALLVNWRPYEWEVREGERI
+hm: 6.4629
+charge: 0.0

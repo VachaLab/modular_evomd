@@ -1,0 +1,3 @@
+seq: QIRMVRRDFRHQHPMHHYMWDG
+hm: 6.1233
+charge: 2.0

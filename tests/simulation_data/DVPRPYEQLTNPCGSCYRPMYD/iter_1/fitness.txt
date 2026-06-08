@@ -1,0 +1,3 @@
+seq: DVPRPYEQLTNPCGSCYRPMYD
+hm: 7.1362
+charge: -1.0

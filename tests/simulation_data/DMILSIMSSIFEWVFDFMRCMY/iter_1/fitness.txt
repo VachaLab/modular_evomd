@@ -1,0 +1,3 @@
+seq: DMILSIMSSIFEWVFDFMRCMY
+hm: 7.1383
+charge: -2.0

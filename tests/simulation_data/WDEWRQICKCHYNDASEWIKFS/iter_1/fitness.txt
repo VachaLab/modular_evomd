@@ -1,0 +1,3 @@
+seq: WDEWRQICKCHYNDASEWIKFS
+hm: 6.0315
+charge: -1.0

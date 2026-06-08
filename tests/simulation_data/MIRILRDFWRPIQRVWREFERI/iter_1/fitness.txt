@@ -1,0 +1,3 @@
+seq: MIRILRDFWRPIQRVWREFERI
+hm: 14.1544
+charge: 3.0

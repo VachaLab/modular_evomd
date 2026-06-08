@@ -1,0 +1,3 @@
+seq: MIRILRDMWRPMQRVWREFRRI
+hm: 13.5581
+charge: 5.0

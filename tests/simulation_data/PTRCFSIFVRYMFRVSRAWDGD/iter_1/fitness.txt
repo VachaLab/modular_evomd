@@ -1,0 +1,3 @@
+seq: PTRCFSIFVRYMFRVSRAWDGD
+hm: 7.5483
+charge: 2.0

@@ -1,0 +1,3 @@
+seq: TIERWAYFSRPYEQGWREGERI
+hm: 7.2316
+charge: 0.0

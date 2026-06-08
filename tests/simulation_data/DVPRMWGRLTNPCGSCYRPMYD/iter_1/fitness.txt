@@ -1,0 +1,3 @@
+seq: DVPRMWGRLTNPCGSCYRPMYD
+hm: 7.849
+charge: 1.0

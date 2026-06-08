@@ -1,0 +1,3 @@
+seq: NREILRDFVRPYQRVWRWFERI
+hm: 12.1605
+charge: 3.0

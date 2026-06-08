@@ -1,0 +1,3 @@
+seq: NRERYRYFWRPYQRVSRAWRKS
+hm: 8.7915
+charge: 7.0

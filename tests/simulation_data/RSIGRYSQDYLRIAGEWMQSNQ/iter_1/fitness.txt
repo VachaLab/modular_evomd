@@ -1,0 +1,3 @@
+seq: RSIGRYSQDYLRIAGEWMQSNQ
+hm: 7.9703
+charge: 1.0

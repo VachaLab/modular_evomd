@@ -1,0 +1,3 @@
+seq: NREILRDMWRPYQRGWREGRKS
+hm: 10.2064
+charge: 4.0

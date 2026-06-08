@@ -1,0 +1,3 @@
+seq: IIFNKFQQCWRRFQTFGTSTHM
+hm: 5.6852
+charge: 3.0

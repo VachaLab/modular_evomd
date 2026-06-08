@@ -1,0 +1,3 @@
+seq: WCQDCGRVYDRDDHCIWTNMWK
+hm: 5.5652
+charge: -1.0

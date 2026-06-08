@@ -1,0 +1,3 @@
+seq: QFLQYMHKLCIESYNRQFRWVD
+hm: 6.4663
+charge: 1.0

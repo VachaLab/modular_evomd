@@ -1,0 +1,3 @@
+seq: KSGWHEVARGSHNYRDYDKPVN
+hm: 5.5762
+charge: 1.0

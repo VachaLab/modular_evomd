@@ -1,0 +1,3 @@
+seq: WHRILRDMVRYMQRVSRAWDGD
+hm: 10.5486
+charge: 2.0

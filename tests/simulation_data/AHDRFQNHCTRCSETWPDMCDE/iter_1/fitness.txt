@@ -1,0 +1,3 @@
+seq: AHDRFQNHCTRCSETWPDMCDE
+hm: 6.4019
+charge: -3.0

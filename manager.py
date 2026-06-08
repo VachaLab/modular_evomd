@@ -145,10 +145,6 @@ class Manager:
             logger.info(f'Manager: checking calculations {current_time()}: cycle {check_cycles}/{self.evolver.instructor.max_check_cycle}')
             # iterate on sequences 
             for idx, seq in enumerate(self.evolver.sequences):
-                # if not seq.is_running:
-                #     seq_ready_status[idx] = True
-                #     continue
-                # exeucte calculator_check
                 try:
                     ready = self.execute_method(seq, calculator_check_function, return_value=True)
                     seq_ready_status[idx] = ready
@@ -165,7 +161,7 @@ class Manager:
                 logger.info(f"Manager: Waiting for {sleep_time} seconds before rechecking.")
                 time.sleep(sleep_time)
                 check_cycles += 1
-            if check_cycles > self.evolver.instructor.max_check_cycle:
+            if check_cycles >= self.evolver.instructor.max_check_cycle:
                 logger.warning(f"Manager: Maximun checking cycles ({self.evolver.instructor.max_check_cycle}) exceeded.")
                 for seq in self.evolver.sequences:
                     if seq.is_waiting_analysis:

@@ -1,0 +1,3 @@
+seq: TCRMWGRCWRPYQQGWREGERI
+hm: 9.9676
+charge: 3.0

@@ -1,0 +1,3 @@
+seq: TIRALRNMRKVEHTHPQWKKKW
+hm: 6.0129
+charge: 6.0

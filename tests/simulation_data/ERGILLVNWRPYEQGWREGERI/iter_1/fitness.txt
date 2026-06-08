@@ -1,0 +1,3 @@
+seq: ERGILLVNWRPYEQGWREGERI
+hm: 6.3934
+charge: 0.0

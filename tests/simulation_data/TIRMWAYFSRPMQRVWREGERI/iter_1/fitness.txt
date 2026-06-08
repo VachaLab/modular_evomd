@@ -1,0 +1,3 @@
+seq: TIRMWAYFSRPMQRVWREGERI
+hm: 10.4715
+charge: 3.0

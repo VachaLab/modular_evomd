@@ -1,0 +1,3 @@
+seq: WDEWRQICKCHYNDAKEWIKKS
+hm: 6.5606
+charge: 1.0

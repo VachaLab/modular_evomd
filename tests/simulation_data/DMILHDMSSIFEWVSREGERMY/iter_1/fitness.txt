@@ -1,0 +1,3 @@
+seq: DMILHDMSSIFEWVSREGERMY
+hm: 7.3222
+charge: -3.0

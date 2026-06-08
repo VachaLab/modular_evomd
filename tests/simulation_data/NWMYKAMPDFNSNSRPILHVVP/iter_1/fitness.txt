@@ -1,0 +1,3 @@
+seq: NWMYKAMPDFNSNSRPILHVVP
+hm: 5.9395
+charge: 1.0

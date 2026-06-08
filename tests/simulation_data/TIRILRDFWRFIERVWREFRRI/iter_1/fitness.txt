@@ -1,0 +1,3 @@
+seq: TIRILRDFWRFIERVWREFRRI
+hm: 13.9951
+charge: 4.0
