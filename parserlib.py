@@ -1,154 +1,240 @@
 # === parserlib.py ===
+"""
+Command-line argument parsing for Evo-MD.
+
+This module defines a single entry point, `get_arguments()`, which builds the
+argparse parser used by `evo-md.py` and returns the parsed namespace.
+
+The arguments fall into two broad groups:
+
+1. Action selectors (mutually exclusive in practice): exactly one of these is
+   expected to be chosen per invocation, since `evo-md.py` dispatches on the
+   first matching action and then exits. Examples: --show-defaults,
+   --show-current, --show-evolver, --report-sequences, --create-evolver,
+   --populate-previous, --stop-evolver, --start, --show-lists,
+   --plot-evolution, --last-generation.
+
+2. Modifiers: flags and values that tune the behaviour of an action without
+   selecting one on their own. Examples: --file, --evopkl, --top-list,
+   --read-report, --fast-cycle, --noverbose, and the plotting modifiers
+   (--show-std, --show-kids, --plot-name).
+
+Input sources:
+    Most actions need an Evolver. It is obtained either by creating a new one
+    from a YAML instruction file (--file) or by loading a previously saved
+    binary (--evopkl, or the default 'evolver.pkl' in the working directory).
+
+Note on --restart:
+    Passing --restart implies --start; this is enforced at the end of
+    get_arguments() so the start workflow runs in recovery mode.
+"""
+
 import argparse
 
 
 def get_arguments() -> argparse.Namespace:
     """
-    Reads command-line arguments and parses to an argparse object.
+    Build the command-line parser and return the parsed arguments.
+
+    Reads ``sys.argv`` and parses it into an ``argparse.Namespace``. As a
+    side effect, ``--restart`` forces ``--start`` to True so that a recovered
+    session reuses the normal start workflow.
 
     Returns:
-        argparse.Namespace: Parsed command-line arguments.
+        argparse.Namespace: Parsed command-line arguments, with one attribute
+        per option (e.g. ``args.file``, ``args.start``, ``args.fast_cycle``).
     """
-    parser = argparse.ArgumentParser(description='Command-line interface for the Evo-MD-FE-DB agent.')
+    parser = argparse.ArgumentParser(
+        description='Command-line interface for the Evo-MD-FE-DB agent.'
+    )
 
-    # Input file with sequences and additional options
+    # --- input sources -------------------------------------------------------
+    # YAML instruction file used to create a brand-new Evolver/Instructor.
+    # When provided (and an action allows new sessions), it takes precedence
+    # over loading an existing pickle.
     parser.add_argument(
         '-f', '--file',
-        help='YAML file containing instructions.'
+        help='YAML file containing the evolution instructions. Used to create '
+             'a new session.'
     )
 
-    # Binary input file 
+    # Path to a previously saved Evolver pickle. Only needed when the binary
+    # is not named 'evolver.pkl' (the default looked up in the working dir).
     parser.add_argument(
         '-evopkl', '--evopkl',
-        help='Binary evolutionary file previously created. Needed if the pkl file name is not evolver.pkl'
+        help='Binary (pickle) Evolver file previously created. Only required '
+             'if the pkl file is not named evolver.pkl.'
     )
 
-    # Show default configuration in Instructor
+    # --- configuration inspection (actions) ----------------------------------
+    # Print the Instructor default configuration (no session needed) and exit.
     parser.add_argument(
         '-sd', '--show-defaults',
         action='store_true',
-        help='Display Instructor default configuration and exit.'
+        help='Display the Instructor default configuration and exit.'
     )
 
-    # Show current configuration in Instructor
+    # Print the Instructor configuration of the current/loaded session and exit.
     parser.add_argument(
         '-sc', '--show-current',
         action='store_true',
-        help='Display Instructor current configuration and exit.'
+        help='Display the current Instructor configuration and exit.'
     )
 
-    # Show  Evolver
+    # --- evolver inspection (actions) ----------------------------------------
+    # Print a summary of the Evolver state (top sequences, counts) and exit.
     parser.add_argument(
         '-se', '--show-evolver',
         action='store_true',
-        help='Display evolver information and exit.'
+        help='Display Evolver information and exit.'
     )
 
+    # Modifier for --show-evolver: how many top sequences to list.
+    # Expects an integer; default None keeps the Evolver's configured value.
     parser.add_argument(
         '-tl', '--top-list',
-        help='Modifies number of sequences to show when --show-evolver is called. Must be an integer.',
-        default=None
+        default=None,
+        help='Number of sequences to show when --show-evolver is used. '
+             'Must be an integer. Modifier for --show-evolver.'
     )
 
-    # Report all sequences
+    # Write every sequence (sequence, generation, fitness) to a CSV file
+    # (sequences_report.csv) and exit.
     parser.add_argument(
         '-rs', '--report-sequences',
         action='store_true',
-        help='Report sequences in a CSV file.'
+        help='Write all sequences to a CSV report (sequences_report.csv) and exit.'
     )
 
-    # --- create evolver ---
+    # --- create evolver (action) ---------------------------------------------
+    # Create the Evolver, populate (or read a report), show it, and exit
+    # without starting the evolution loop.
     parser.add_argument(
         '-ce', '--create-evolver',
         action='store_true',
-        help='Creates evolver, shows evolver and exit.'
+        help='Create the Evolver, populate it, display it, and exit without '
+             'running the evolution loop.'
     )
 
+    # Modifier for --create-evolver: initialize from an existing CSV report
+    # instead of populating from scratch. The CSV must use the columns
+    # produced by --report-sequences: sequence,generation,fitness.
     parser.add_argument(
         '-rr', '--read-report',
-        help='CSV report (sequence,generation,fitness) used to initialize the evolver '
-            'together with --create-evolver.',
-        default=None
+        default=None,
+        help='CSV report (columns: sequence,generation,fitness) used to '
+             'initialize the Evolver. Modifier for --create-evolver.'
     )
 
-    # stop the evolver job after finishing the current iteration
+    # --- run control (actions) -----------------------------------------------
+    # Request a graceful stop: sets the Evolver as non-runnable so the loop
+    # exits after finishing the current iteration, then saves and exits.
     parser.add_argument(
         '-stop', '--stop-evolver',
         action='store_true',
-        help='Stops evolver after finishing the current iteration.'
+        help='Stop the Evolver gracefully after the current iteration finishes.'
     )
 
-    # Agent actions
+    # Start the evolution loop. Populates, marks the Evolver as started, and
+    # iterates until a termination criterion is met or a stop is requested.
     parser.add_argument(
         '-start', '--start',
-        help='Start the evo-md process.',
-        action='store_true'
+        action='store_true',
+        help='Start the Evo-MD evolution loop.'
     )
-    
-    # Recover interrupted session
+
+    # Resume an interrupted iteration. Implies --start (enforced below) and
+    # enables recovery so already-completed steps of the last iteration are
+    # skipped. If the last iteration finished cleanly, use --start instead.
     parser.add_argument(
         '-rstart', '--restart',
         action='store_true',
-        help='Attempt to continue from an interrupted iteration.'
+        help='Resume from an interrupted iteration (implies --start). If the '
+             'last iteration finished, use --start instead.'
     )
 
+    # Populate the Evolver from previously computed simulations found in the
+    # simulation directory (requires an analyzer), then save and exit.
     parser.add_argument(
         '-pp', '--populate-previous',
         action='store_true',
-        help='Populate using information from previous simulations in the simulation directory.'
+        help='Populate using results from previous simulations in the '
+             'simulation directory, then exit.'
     )
 
+    # --- inspection of sequence lists (action) -------------------------------
+    # Print the contents of every Evolver list (current, parents, discarded,
+    # excluded) with per-list counts and a grand total, then exit.
     parser.add_argument(
         '-sl', '--show-lists',
         action='store_true',
-        help='Display all the sequences by list in evolver.'
+        help='Display all Evolver sequence lists (current, parents, '
+             'discarded, excluded) with counts, and exit.'
     )
 
-    # --- plot ---
+    # --- plotting (action + modifiers) ---------------------------------------
+    # Plot the fitness evolution across generations and exit.
     parser.add_argument(
         '-pe', '--plot-evolution',
         action='store_true',
-        help='Plot evolution ans exit.'
+        help='Plot the fitness evolution across generations and exit.'
     )
+
+    # Modifier for --plot-evolution: overlay the standard deviation per
+    # generation on a secondary axis.
     parser.add_argument(
         '-pstd', '--show-std',
         action='store_true',
-        help='Show standard deviation in plot.'
+        help='Overlay per-generation standard deviation on the plot. '
+             'Modifier for --plot-evolution.'
     )
+
+    # Modifier for --plot-evolution: scatter every individual ("kid")
+    # fitness value per generation.
     parser.add_argument(
         '-pkids', '--show-kids',
         action='store_true',
-        help='Show kids in each generation.'
-    )
-    parser.add_argument(
-        '-pname', '--plot-name',
-        help='Name of the plot.',
-        default='evolution.png'
+        help='Scatter individual sequence fitness values per generation. '
+             'Modifier for --plot-evolution.'
     )
 
-    # --- going back ---
+    # Modifier for --plot-evolution: output image filename.
+    parser.add_argument(
+        '-pname', '--plot-name',
+        default='evolution.png',
+        help='Output filename for the evolution plot (default: evolution.png). '
+             'Modifier for --plot-evolution.'
+    )
+
+    # --- going back (action) -------------------------------------------------
+    # Roll back to the last fully completed generation: drop sequences from
+    # later generations, reset the generation counter, re-sort, save and exit.
     parser.add_argument(
         '-lg', '--last-generation',
         action='store_true',
-        help='Go back to the last completed generation.'
+        help='Roll back to the last completed generation, then save and exit.'
     )
 
-    # --- fast cycle ---
+    # --- global modifiers ----------------------------------------------------
+    # Skip intermediate pickle saves; the Evolver is written to disk only at
+    # the end of the run. Faster, but less crash-resistant.
     parser.add_argument(
         '-fc', '--fast-cycle',
         action='store_true',
-        help='Save pkl file only at the end of the evolution.'
+        help='Save the pkl file only at the end of the run (skips '
+             'intermediate saves). Faster but less crash-resistant.'
     )
+
+    # Reduce Evolver console output during the run.
     parser.add_argument(
         '-nvb', '--noverbose',
         action='store_true',
-        help='No verbose Evolver.'
+        help='Reduce Evolver console output.'
     )
 
-    
     args = parser.parse_args()
 
-    # If restart is True, force start to be True
+    # --restart always runs through the start workflow, in recovery mode.
     if args.restart:
         args.start = True
 
@@ -157,3 +243,4 @@ def get_arguments() -> argparse.Namespace:
 
 if __name__ == '__main__':
     pass
+    
