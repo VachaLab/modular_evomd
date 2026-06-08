@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 class Evolver:
     name = 'evolver'
 
-    def __init__(self, instructor, recover=False, fast_cycle=False, verbose=True) -> None:
+    def __init__(
+        self, instructor, recover=False,
+        fast_cycle=False, verbose=True,
+        ) -> None:
         self.instructor = instructor
         self.manager = Manager(self)  # Manager creates directories 
         self.name = self.instructor.evolver_name
@@ -54,11 +57,8 @@ class Evolver:
         is_extra_mut = ''
         if self.instructor.extra_mutation:
             is_extra_mut = ' + mutation'
-        is_resurrection = ''
-        if self.instructor.include_resurrection:
-            is_resurrection = ' + resurrection'
         
-        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}{is_resurrection}\n")
+        lines.append(f"{'Population method':<24}: {is_weighted}{str(self.instructor.populate_method)}{is_extra_mut}\n")
         lines.append(f"{'Started':<24}: {str(self.started)}\n")
         lines.append(f"{'Generations':<24}: {str(self.generations)}\n")
         lines.append(f"{'Current sequences':<24}: {len(self.sequences)}\n")
@@ -102,7 +102,7 @@ class Evolver:
                 fitness = seq.fitness
                 fo.write(f'{seq.sequence},{seq.generation},{fitness}\n')
 
-    def plot_evolution(self, show_std=False, show_kids=False):
+    def plot_evolution(self, show_std=False, show_kids=False, name='evolution.png'):
         import math
         import matplotlib.pyplot as plt
 
@@ -147,9 +147,9 @@ class Evolver:
         
         # plot 
         ax.plot(avail_gens, population_fitness, color='black', linestyle='-', label='Population', linewidth=2)
-        ax.plot(avail_gens, ave_kids, color='green', linestyle='-', label='Av. fitness', linewidth=1)
-        ax.plot(avail_gens, best_kid, color='gray', linestyle='--', label='Best fitness', linewidth=1)
-        ax.plot(avail_gens, worst_kid, color='gray', linestyle='-.', label='Worst fitness', linewidth=1)
+        ax.plot(avail_gens, ave_kids, color='green', linestyle='-', label='Average kids', linewidth=1)
+        ax.plot(avail_gens, best_kid, color='gray', linestyle='--', label='Highest fitness', linewidth=1)
+        ax.plot(avail_gens, worst_kid, color='gray', linestyle='-.', label='Lowest fitness', linewidth=1)
 
         # set left axis
         ax.set_xlabel('Generations')
@@ -173,7 +173,7 @@ class Evolver:
 
         fig.tight_layout()
         plt.show()
-        fig.savefig('evolution.png', dpi=300)
+        fig.savefig(name, dpi=300)
 
     # validate and find sequences ------------------------------------------------------
     def is_valid_sequence(self, seq) -> bool:
@@ -217,65 +217,50 @@ class Evolver:
         return random.random() < probability
 
     def choose_sequence(
-            self, weighted=False, reverse=False, exception=None, include_elite=True, 
-            include_discarded=False, include_current=False,
-             only_discarded=False, only_current=False,
+            self, weighted: bool = False, 
+            exception: (list | tuple | set| Sequence) = None,
+            include_discarded: bool = False,
+            only_discarded: bool = False, 
+            only_current: bool = False,
             ):
-        """Returns a Sequence object choosen randomly with or without weights."""
-        # make a copy of self.sequences to avoid undesired modifications
-        # population is the list from which sequence will be taken
-        # as first entry: only parent sequences
+        """
+        Returns a Sequence object chosen randomly, optionally weighted by fitness rank.
+        It assumes that sequences are already sorted by self.sort_sequences().
+        """
+        # define population (pool of sequences)
+        # only parents is usually enough
         population = self.parent_sequences
 
-        # modify population list
-        # include more elements
+        # include discarded sequences to choose from a bigger pool
         if include_discarded:
             population = population + self.discarded_sequences
-        if include_current:
-            population = population + self.sequences
-        
-        # select only one type of sequences
-        # this section excludes the previous one
+
+        # choose only from discarded sequences
         if only_discarded:
             population = self.discarded_sequences
+        
+        # choose from self.sequences 
         if only_current:
             population = self.sequences
 
-        # apply exceptions
+        # include exceptions (avoid sequences in exception iterable)
         if exception:
-            # if exception is not a list, tuple or set, turn it into a list
             if not isinstance(exception, (list, tuple, set)):
                 exception = [exception]
-            # remove exceptions
             population = [k for k in population if k not in exception]
-        if not include_elite:
-            # remove elite if include_elite=False
-            population = [k for k in population if not k.is_elite]
 
-        # population will no longer be modified from this point on -------------------
+        # population is now fixed -------------------------------------------
+        # is it weighted choice?
         if not weighted:
-            # All the sequences have the same chance to be choosen
             return random.choice(population)
-        
-        # reverse only makes sense when weighted is True
-        if reverse:
-            # invert list
-            population = population[::-1]
 
-        # create weight list based on position
+        # weight purely by rank position (better-ranked --> higher weight)
         weights = []
         n = len(population)
         for idx, seq in enumerate(population):
-            base_weight = (n - idx) * self.instructor.weight_bias  # Mayor peso a los primeros
-            if seq.is_elite:
-                multiplier = self.instructor.elite_bias
-                if reverse:
-                    try: multiplier = 1/multiplier
-                    except ZeroDivisionError: multiplier = 0.0
-                base_weight *= multiplier  # Aumento o reducción del peso si es elite
-            weights.append(base_weight)
+            weights.append((n - idx) * self.instructor.weight_bias)
         return random.choices(population, weights=weights, k=1)[0]
-    
+
     # Populate -------------------------
     def first_sequences(self) -> None:
         print('Evolver: Starting sequences')
@@ -318,57 +303,97 @@ class Evolver:
 
     def populate(self) -> None:
         """
-        Populate self.sequences
+        Populate self.sequences up to the target size.
+
+        Children are always generated from parents that remain in
+        self.parent_sequences (so the Generator has a pool to cross).
+
+        If include_parents is True, parents are simulated too: children are
+        generated only up to (population - number_of_parents), and the parents
+        are then promoted into self.sequences to complete the population.
+        If include_parents is False, children fill the whole population and the
+        parents are moved to discarded_sequences at the end.
         """
         logger.debug("Start Evolver.populate()")
+
         # if it's already populated, do nothing
         if len(self.sequences) == self.instructor.population:
             logger.warning('Evolver: Already populated --> skipping')
             return
-        
+
         # count generations once evolver is started
         if self.started and len(self.sequences) < self.instructor.population:
             self.generations += 1
 
-        # First population if Evolver is not started
-        # No parents given to Generator
+        # --- first population: no parents given to Generator ---
         if not self.started:
             logger.debug("Evolver.start == False. Running first population.")
-            # first population
             print("First population.")
             while len(self.sequences) < self.instructor.population:
-                candidate = self.instructor.generator.generate(verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
-                # is not valid if the sequences already exists and avoid_reinsertion is True
+                candidate = self.instructor.generator.generate(
+                    verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
                 if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
-                    print('Sequence already exists --> discarding')
+                    if self.verbose:
+                        print('Sequence already exists --> discarding')
                     continue
                 logger.info(f'New sequence: {candidate}')
                 self.sequences.append(Sequence(candidate))
-                
-        else:
-            logger.debug(f"Evolver.start == True. Generation {self.generations}")
-            # populate using populate_method
-            print("Filling Population.")
-            while len(self.sequences) < self.instructor.population:
-                # Choose parents: always 2?
-                parent1 = self.choose_sequence(
-                    weighted=self.instructor.populate_weighted, 
-                    reverse=False, include_elite=True,
-                    include_discarded=self.instructor.include_discarded
-                    )
-                parent2 = self.choose_sequence(
-                    weighted=self.instructor.populate_weighted, 
-                    reverse=False, include_elite=True, exception=parent1,
-                    include_discarded=self.instructor.include_discarded
-                    )
-                candidate = self.instructor.generator.generate(seq1=parent1, seq2=parent2, verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
-                # is not valid if the sequences already exists and avoid_reinsertion is True
-                if self.sequence_exists(candidate) and self.instructor.avoid_reinsertion:
+            return
+
+        # --- subsequent generations ---
+        logger.debug(f"Evolver.start == True. Generation {self.generations}")
+
+        # target number of children to generate this generation.
+        # If parents are simulated too, leave room for them.
+        target = self.instructor.population
+        if self.instructor.include_parents:
+            target = self.instructor.population - len(self.parent_sequences)
+
+        print("Filling Population.")
+        # parents stay in self.parent_sequences during generation, so the
+        # Generator always has a pool to cross.
+        while len(self.sequences) < target:
+            parent1 = self.choose_sequence(
+                weighted=self.instructor.populate_weighted,
+                include_discarded=self.instructor.include_discarded,
+            )
+            parent2 = self.choose_sequence(
+                weighted=self.instructor.populate_weighted, exception=parent1,
+                include_discarded=self.instructor.include_discarded,
+            )
+            candidate = self.instructor.generator.generate(
+                seq1=parent1, seq2=parent2,
+                verbose=self.verbose, max_attempts=self.instructor.max_gen_attemps)
+
+            already_here = self.sequence_exists(candidate)
+
+            if already_here and self.instructor.avoid_reinsertion:
+                # duplicates are forbidden --> reject
+                if self.verbose:
                     print('Sequence already exists --> discarding')
-                    continue
-                logger.info(f'New sequence: {candidate}')
-                self.sequences.append(Sequence(candidate, generation=self.generations))
-            # discard self.parent_sequences after populate
+                continue
+
+            if already_here and not self.instructor.avoid_reinsertion:
+                # reinsertion: recover the existing unique object, count it,
+                # and move it into the current population
+                existing = self.take_sequence(candidate)
+                existing.check_reinsertion(
+                    iterations_preferent=self.instructor.iterations_elite)
+                existing.generation = self.generations
+                self.sequences.append(existing)
+                logger.info(f'Reinserted sequence: {candidate}')
+                continue
+
+            logger.info(f'New sequence: {candidate}')
+            self.sequences.append(Sequence(candidate, generation=self.generations))
+
+        # --- handle the parents now that generation is done ---
+        if self.instructor.include_parents:
+            # parents are simulated too: promote them to complete the population
+            self.sequences = self.sequences + self.parent_sequences
+            self.parent_sequences = []
+        else:
+            # parents are not simulated: discard them
             self.discarded_sequences = self.parent_sequences + self.discarded_sequences
             self.parent_sequences = []
 
@@ -387,10 +412,11 @@ class Evolver:
         self.sequences = []
         sequences = os.listdir(self.instructor.evomd_directory)
         for seq in sequences:
-            if not self.fits_length(seq):
-                # skip if length does not fit
+            if len(seq) != self.instructor.peptide_len:
+                # skip if len does not match
+                logger.warning(f'Evolver: Length does not match "{seq}" (expected {self.instructor.peptide_len}) --> skipping')
                 continue
-            if len(sq) != self.instructor.peptide_len and self.instructor.check_validity:
+            if len(seq) != self.instructor.peptide_len and self.instructor.check_validity:
                 # skip is is not a valid sequence
                 continue
             # create Sequence object
@@ -568,7 +594,6 @@ class Evolver:
 
         # split lists
         num_total = self.instructor.population
-        num_elite = int(num_total * self.instructor.elite_ratio)
         num_to_keep = int(num_total * self.instructor.parents_ratio)
 
         # restart lists
@@ -579,28 +604,27 @@ class Evolver:
         for idx, seq in enumerate(all_sequences):
             seq.current_index = idx
 
-            # set top
-            if idx < num_elite:
-                seq.is_top = True
+            # set top: the elite-ratio fraction at the front of the ranking
+            num_elite = int(num_total * self.instructor.elite_ratio)
+            seq.is_top = idx < num_elite
 
-            # set elites: executed after self.instructor.iterations_elite generations
+            # update elite tag (consecutive top generations).
+            # Only meaningful once the run is past the warm-up window.
             if self.generations > self.instructor.iterations_elite:
-                seq.check_elite()
+                seq.check_elite(iterations_elite=self.instructor.iterations_elite)
 
-            # append into lists
-            if seq.is_elite:
-                # elite go to self.sequences --> it's going to be simulated
-                self.sequences.append(seq)
-                seq.is_discarded = False
-            elif len(self.parent_sequences) < (num_to_keep - len(self.sequences)):
-                # non-elite sequences 
+            # distribution is purely by ranking
+            if idx < num_to_keep:
                 self.parent_sequences.append(seq)
                 seq.is_discarded = False
             else:
                 self.discarded_sequences.append(seq)
         
-        logger.debug(f'Evolver.sort_sequences(): Number of sequences: sequences {len(self.sequences)} parent {len(self.parent_sequences)} discarded {len(self.discarded_sequences)}')
+        if self.verbose:
+            print("Evolver: Sequences sorted")
+            print(f'Evolver.sort_sequences(): Number of sequences: sequences {len(self.sequences)} parent {len(self.parent_sequences)} discarded {len(self.discarded_sequences)}')
     
+
     def set_failed(self):
         """
         move to failed_sequences is Sequence.is_failed = True
@@ -644,24 +668,58 @@ class Evolver:
             logger.error(f'Evolver: taking_sequence: trying to take {seq} but it wasnot found in any list --> stopping evolution')
             exit(2)
 
+    # going back ----------------------------------------------------
+    def revert_last_generation(self):
+        """
+        Reverts the evolver to the last fully completed generation.
 
-    def take_sequence_prev(self, seq):
+        The last completed generation is defined as the highest generation
+        among sequences that already have a valid fitness (not None, not nan).
+        All sequences belonging to later generations are removed, and
+        self.generations is set to that generation. Sequences are then
+        redistributed with sort_sequences().
         """
-        Take a sequence object from self.sequences or self.discarded_sequences and remove it 
-        from those lists
-        """
-        seq = str(seq)
-        existing_seq = None
-        for seq_list in [self.sequences, self.discarded_sequences]:
-            for seq_old in seq_list:
-                if str(seq_old) == seq:
-                    existing_seq = seq_old
-                    seq_list.remove(seq_old)  # remove from list
-                    break
-            if existing_seq:  # if it's found, stop searching
-                break
-        if existing_seq:
-            return existing_seq
+        import math
+        logger.info('Evolver: Reverting to last completed generation')
+
+        # gather every sequence currently held (objects are unique across lists)
+        all_sequences = self.sequences + self.parent_sequences + self.discarded_sequences
+
+        # sequences with a valid (evaluated) fitness
+        valid = [s for s in all_sequences
+                 if s.fitness is not None and not math.isnan(s.fitness)]
+
+        if not valid:
+            logger.error('Evolver: no sequences with valid fitness found --> cannot revert')
+            exit(1)
+
+        # last completed generation = highest generation among evaluated sequences
+        last_gen = max(s.generation for s in valid)
+        logger.info(f'Evolver: last completed generation is {last_gen}')
+
+        # keep only sequences from last_gen or earlier
+        kept = [s for s in all_sequences
+                if s.generation <= last_gen
+                and s.fitness is not None and not math.isnan(s.fitness)]
+        removed = len(all_sequences) - len(kept)
+        logger.info(f'Evolver: removing {removed} sequences from generations after {last_gen}')
+
+        # put everything into a single working list; sort_sequences() reads
+        # self.sequences + self.discarded_sequences, so place them there
+        self.sequences = kept
+        self.parent_sequences = []
+        self.discarded_sequences = []
+
+        # adjust the generation counter
+        self.generations = last_gen
+
+        # redistribute into parent / discarded and refresh flags
+        self.sort_sequences()
+
+        logger.info(f'Evolver: reverted to generation {self.generations}')
+        logger.info(f'Evolver: {len(self.sequences)} in sequences list')
+        logger.info(f'Evolver: {len(self.parent_sequences)} in parent sequences list')
+        logger.info(f'Evolver: {len(self.discarded_sequences)} in discarded sequences list')
 
     # Iterate ----------------------------------------------------
     def is_valid_plan(self, plan):
@@ -777,10 +835,19 @@ class Evolver:
             if self.generations >= self.instructor.max_generations:
                 logger.info("Evolver: Max generations reached --> stopping")
                 self.runnable = False
+        
         if self.instructor.target_fitness is not None:
-            if self.discarded_sequences[0].fitness >= self.instructor.target_fitness:
-                logger.info("Evolver: Target fitness reached --> stopping")
-                self.runnable = False
+            minimize = str(self.instructor.optimize).lower() == 'minimize'
+            all_seqs = self.sequences + self.parent_sequences + self.discarded_sequences
+            fitnesses = [s.fitness for s in all_seqs if s.fitness is not None]
+
+            if fitnesses:
+                best = min(fitnesses) if minimize else max(fitnesses)
+                target = self.instructor.target_fitness
+                reached = (best <= target) if minimize else (best >= target)
+                if reached:
+                    logger.info("Evolver: Target fitness reached --> stopping")
+                    self.runnable = False
 
 
 if __name__ == '__main__':

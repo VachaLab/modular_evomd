@@ -59,6 +59,7 @@ class Sequence:
         self.is_reinserted: bool = False
         self.is_top: bool = False
         self.is_constructed: bool = False
+        self.is_just_constructed: bool = False
         self.is_running: bool = False
         self.is_waiting_analysis: bool = False
         self.is_failed: bool = False
@@ -74,6 +75,7 @@ class Sequence:
         self.failed_simulations: int = 0
         self.reinsertions: int = 0
         self.times_elite: int = 0
+        self.consecutive_top: int = 0   # consecutive generations in the top section
 
         # Position in sorted population
         self.current_index: Optional[int] = None
@@ -178,23 +180,43 @@ class Sequence:
 
     # State management ------------------------------------------------------
 
-    def check_elite(self) -> bool:
+    def check_elite(self, iterations_elite: int = 3) -> bool:
         """
-        Marks the sequence as elite if it occupies a top-ranked position.
-        Returns True if elite status is confirmed.
+        Updates the consecutive-top counter and assigns the elite tag.
+
+        Elite is a diagnostic label: a sequence becomes elite when it has
+        stayed in the top section for `iterations_elite` consecutive
+        generations. It does NOT affect list distribution or parent selection.
+        Returns True if elite status is currently set.
         """
         if self.is_top:
-            logger.info(f"Sequence {self.sequence} is elite")
-            self.times_elite += 1
+            self.consecutive_top += 1
+        else:
+            # streak broken --> reset both counter and label
+            self.consecutive_top = 0
+            self.is_elite = False
+            return False
+
+        if self.consecutive_top >= iterations_elite:
+            if not self.is_elite:
+                logger.info(f"Sequence {self.sequence} is elite "
+                            f"({self.consecutive_top} consecutive top generations)")
             self.is_elite = True
+            self.times_elite += 1
             return True
+
         self.is_elite = False
         return False
-
+    
     def check_reinsertion(self, iterations_preferent: int = 3) -> None:
         """
-        Updates state flags when a sequence is recovered from the discarded list.
-        Marks the sequence as preferent if reinsertions reach the threshold.
+        Called when a sequence reappears as a child after having been
+        discarded (only happens when avoid_reinsertion == False).
+        Increments the reinsertion counter and assigns the preferent tag
+        when the threshold is reached.
+
+        Preferent is a diagnostic label: it signals that parents lack enough
+        variability, since the same sequence keeps being regenerated.
         """
         self.reinsertions += 1
         self.is_discarded = False
@@ -202,7 +224,8 @@ class Sequence:
         logger.info(f"Sequence {self.sequence} was reinserted ({self.reinsertions})")
         if self.reinsertions >= iterations_preferent:
             self.is_preferent = True
-            logger.info(f"Sequence {self.sequence} is preferent")
+            logger.warning(f"Sequence {self.sequence} is preferent "
+                           f"({self.reinsertions} reinsertions) --> parents may lack variability")
 
 
 if __name__ == '__main__':

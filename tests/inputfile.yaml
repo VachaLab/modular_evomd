@@ -1,66 +1,232 @@
-optimize: maximize
-populate_method: [swap, hybrids, faces]
-mixture_options: [
-  faces,
-  mutations,
-  swap,
-  hybrids,
-]
-mixture_weights: [
-  1,    
-  1,       
-  1,
-  1,
-]
-populate_weighted: False
-extra_mutation: True
-also_mutate_probability: 0.1    # random mutation: 10% of the generated sequences
+# ============================================================================
+# Evo-MD configuration file (Instructor input)
+# ============================================================================
+# Every key below corresponds to an adjustable Instruction in the Instructor
+# class. The values shown are the built-in DEFAULTS: if you delete a key (or
+# the whole file), the program falls back to exactly these values.
+#
+# Notes:
+#   * YAML is case-sensitive. Booleans are True / False (capitalized works too).
+#   * Use `null` for "no value" (None in Python), e.g. max_generations: null.
+#   * Lists use [a, b, c] or the dashed block form.
+# ============================================================================
 
+
+# --- basic configuration ----------------------------------------------------
+
+# Directory where all per-sequence simulation folders are created/read.
+evomd_directory: simulation_data
+
+# Base name used for the saved Evolver state (produces <evolver_name>.pkl).
+evolver_name: evolver
+
+# Optimization direction for the fitness value. One of: maximize | minimize.
+optimize: maximize
+
+# Hydrophobicity scale used everywhere (restrictions, moments, mutations).
+# One of: eisenberg | kyte-doolittle | wimley-white | fauchere-pliska.
+hydrofobic_scale: eisenberg
+
+
+# --- sequence lists ----------------------------------------------------------
+
+# Initial seed sequences. If given, they form the first population (up to
+# `population`). Leave empty to build the first population from scratch.
+sequences: []
+
+# Sequences that must NEVER appear during evolution (exact-match, forbidden).
+excluded_sequences: []
+
+
+# --- display -----------------------------------------------------------------
+
+# How many top sequences to print when showing the Evolver (--show-evolver).
+top_list: 10
+
+
+# --- population --------------------------------------------------------------
+
+# Amino acids allowed when generating/mutating residues. Restricting this is a
+# powerful way to bias the search (reduced alphabet).
+mut_aa: ACDEFGHIKLMNPQRSTVWY
+
+# Length of every peptide (fixed). All parents and children share this length.
+peptide_len: 18
+
+# Number of sequences simulated per generation (population size).
+population: 32
+
+# Generation method(s). A list; if more than one, they are chosen at random
+# weighted by `method_weights`. Valid entries:
+#   swap | hybrids | faces | group_mutation | hydrophobic_mutation
+#   pattern (exclusive: cannot be combined) | flanks (wraps flank_inner)
+populate_method: [swap, hybrids]
+
+# Selection weights aligned with populate_method. null = equal weights.
+# Ignored when only one method is selected.
+method_weights: null
+
+# If True, apply one extra random point mutation after the main method,
+# with probability `also_mutate_probability`.
+extra_mutation: True
+
+# Probability of the extra point mutation (only used when extra_mutation: True).
+# Range [0, 1].
+also_mutate_probability: 0.1
+
+# If True, parents are carried over into the next generation.
+include_parents: False
+
+# If True, a previously discarded sequence may be re-tested ("resurrected").
+include_resurrection: False
+
+# Probability of resurrecting a discarded sequence instead of generating one.
+resurrection_probability: 0.001
+
+# If True, discarded sequences may also be used as parents when generating.
+populate_discarded: False
+
+# If True, an already-tested sequence becomes forbidden (no re-insertion).
+avoid_reinsertion: True
+
+
+# --- faces method ------------------------------------------------------------
+
+# Total angular width (degrees) of the hydrophobic-face slice for `faces`.
+# Centered on the hydrophobic-moment vector. Range [0, 360].
+face_slice_angle: 180
+
+
+# --- pattern method ----------------------------------------------------------
+
+# Template string for the `pattern` method. '-' marks positions to vary;
+# all other characters are fixed. null disables it.
+pattern: null
+
+# Per-free-position residue options for `pattern` (list of lists).
+# null = use the full mut_aa pool at every free position.
+pattern_options: null
+
+# Per-option weights for `pattern` (same shape as pattern_options).
+# null = equal weights.
+pattern_weights: null
+
+# Maximum number of free positions mutated at once (with-parent mode).
+pattern_maxmut: 1
+
+
+# --- flanks method -----------------------------------------------------------
+
+# Constant N-terminal fragment kept fixed for the whole run. null = none.
+n_flank: null
+
+# Constant C-terminal fragment kept fixed for the whole run. null = none.
+c_flank: null
+
+# Inner method applied to the core when using `flanks`. One of:
+# swap | hybrids | group_mutation | hydrophobic_mutation.
+flank_inner: swap
+
+
+# --- choosing parents --------------------------------------------------------
+
+# Fraction of the population discarded each generation. 0.7 means up to 70%
+# are discarded, so ~30% are kept as potential parents.
+parents_ratio: 0.3
+
+# If True, better-ranked sequences are preferred when choosing parents.
+populate_weighted: False
+
+# Strength of the ranking bias when populate_weighted: True.
+# weight = (population - index) * weight_bias.
+weight_bias: 0.3
+
+# If True, discarded sequences are also eligible as parents.
 include_discarded: False
 
-first_fill: random
-check_validity: False
-face_reference: negative
-face_slice_angle: 120
-maximum_swap_ratio: 0.25   # max swap: 5 resiudes
-minimum_swap_ratio: 0.05   # min swap: 1 residue
-swap_reconstruct: parent
-swap_random_probability: 0.05  # only for swap_reconstruction: choose
-# ------------------
-positive_preference: False
-positive_position: 0.
-positive_tolerance: 0.5
-negative_preference: False
-negative_position: -1.
-negative_tolerance: 0.5
-# ------------------
-prohibited_patterns: 
-  [
-  ]
-excluded_sequences:
-  [
-  ]
-peptide_len: 20
-sequences: 
-  [
-  ]
 
-# --- restrictions ---
-hydrophobic_restriction: True
-hydrophobic_min: 0.25
+# --- restrictions ------------------------------------------------------------
+# A candidate is only accepted when it passes every active restriction.
+
+# Hydrophobic-moment restriction (amphipathicity). Active by default.
+hydrophobic_restriction: False
+hydrophobic_min: 5.5
+hydrophobic_max: 100
+
+# Hydrophobic-index restriction (sum of residue hydrophobicities).
+hindex_restriction: False
+hindex_min: -9.0
+hindex_max: -6.5
+
+# Net-charge restriction (sum of residue charges).
+charge_restriction: True
+charge_min: 1
+charge_max: 22
+
+# Forbidden substrings/regex patterns inside a sequence.
+# Example: ["KKK"] forbids three or more consecutive K.
+prohibited_patterns: []
+
+# Require at least this many positive residues (K, R). 0 = no requirement.
+positive_atleast: 0
+
+# Require at least this many negative residues (D, E). 0 = no requirement.
+negative_atleast: 1
+
+# Hydrophobicity-distribution (alternation) restriction.
 hdistribution_restriction: False
-hindex_restriction: True
-hindex_min: -200
-hindex_max: -5.
-charge_restriction: False
-charge_min: 2.
-charge_max: 6.
+hdistribution_threshold: 0.9
+
+
+# --- validation --------------------------------------------------------------
+
+# If True, seed `sequences` are validated (length + restrictions) on load.
+check_validity: True
+
+
+# --- elite handling ----------------------------------------------------------
+
+# Number of generations before elite status starts being assigned.
 iterations_elite: 1
-population: 32
-discard_ratio: 0.75   # 8 parents --> 1/4 of the population
-mut_aa: ADEFKLNQRSTY  #  reduced alphabet; important aa found in ecoli vs human evolution
-constructor: constructor # constructor method
-calculator: calculations # calculator method
-analyzer: analyzer # analyzer method
-sleep_time: 1800  # 30 min
-max_check_cycle: 400 # 200 hours = 8.3 days
+
+# Fraction of the population that can become elite (e.g. 0.01 = top 1%).
+elite_ratio: 0.01
+
+# Extra selection weight given to elite sequences as parents (only when
+# populate_weighted: True). 1.0 = no bias.
+elite_bias: 1.0
+
+
+# --- external methods --------------------------------------------------------
+# Names of the user-supplied Python modules (without .py) providing the
+# functions the Manager calls each iteration. Leave empty only for dry runs.
+
+# Module with constructor_method(sequence): prepares each simulation system.
+constructor: compute_hm
+
+# Module with calculator_method(sequence) and calculator_check(sequence):
+# launches simulations and reports whether each one has finished.
+calculator: compute_hm
+
+# Module with analyzer_method(sequence): computes and returns the fitness.
+analyzer: compute_hm
+
+
+# --- evolution iteration -----------------------------------------------------
+
+# Maximum attempts the Generator makes to produce one valid sequence before
+# giving up (guards against over-strict restrictions).
+max_gen_attemps: 100000
+
+# Seconds to wait between simulation-status checks.
+sleep_time: 0
+
+# Maximum number of check cycles before unfinished simulations are marked
+# failed.
+max_check_cycle: 144
+
+# Stop after this many generations. null = no generation limit.
+max_generations: 200
+
+# Stop when the best fitness reaches this value. null = no fitness target.
+target_fitness: 10

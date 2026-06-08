@@ -44,7 +44,6 @@ def get_arguments() -> argparse.Namespace:
         help='Display evolver information and exit.'
     )
 
-    # Show  Evolver
     parser.add_argument(
         '-tl', '--top-list',
         help='Modifies number of sequences to show when --show-evolver is called. Must be an integer.',
@@ -58,11 +57,18 @@ def get_arguments() -> argparse.Namespace:
         help='Report sequences in a CSV file.'
     )
 
-    # just create evolver
+    # --- create evolver ---
     parser.add_argument(
         '-ce', '--create-evolver',
         action='store_true',
         help='Creates evolver, shows evolver and exit.'
+    )
+
+    parser.add_argument(
+        '-rr', '--read-report',
+        help='CSV report (sequence,generation,fitness) used to initialize the evolver '
+            'together with --create-evolver.',
+        default=None
     )
 
     # stop the evolver job after finishing the current iteration
@@ -87,20 +93,9 @@ def get_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        '-cm', '--change-method',
-        action='store_true',
-        help='Interactively change optimization method parameters.'
-    )
-
-    parser.add_argument(
         '-pp', '--populate-previous',
         action='store_true',
         help='Populate using information from previous simulations in the simulation directory.'
-    )
-
-    parser.add_argument(
-        '-in', '--insert-sequence',
-        help='Insert a sequence and exit.'
     )
 
     parser.add_argument(
@@ -109,6 +104,7 @@ def get_arguments() -> argparse.Namespace:
         help='Display all the sequences by list in evolver.'
     )
 
+    # --- plot ---
     parser.add_argument(
         '-pe', '--plot-evolution',
         action='store_true',
@@ -124,30 +120,31 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help='Show kids in each generation.'
     )
+    parser.add_argument(
+        '-pname', '--plot-name',
+        help='Name of the plot.',
+        default='evolution.png'
+    )
 
+    # --- going back ---
     parser.add_argument(
         '-lg', '--last-generation',
         action='store_true',
         help='Go back to the last completed generation.'
     )
+
+    # --- fast cycle ---
     parser.add_argument(
         '-fc', '--fast-cycle',
         action='store_true',
         help='Save pkl file only at the end of the evolution.'
     )
     parser.add_argument(
-        '-rr', '--read-report',
-        help='CSV report (sequence,generation,fitness) used to initialize the evolver '
-            'together with --create-evolver.',
-        default=None
+        '-nvb', '--noverbose',
+        action='store_true',
+        help='No verbose Evolver.'
     )
 
-    # test
-    parser.add_argument(
-        '-test', '--test',
-        help='Testing in evo-md.py script.',
-        action='store_true'
-    )
     
     args = parser.parse_args()
 

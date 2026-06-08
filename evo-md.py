@@ -73,20 +73,6 @@ def main():
         print(evo.instructor)
         exit(0)
 
-    elif args.change_method:
-        # Load the latest Evolver object
-        evo = get_evolver(args, skip_new=True)
-        logger.info('Showing Evolver . . .')
-        print(evo.instructor)
-
-        # Interactive method modification
-        evo.instructor.interactive_change_method(evo.generations)
-
-        # Save updated state
-        logger.info('Saving new configuration . . .')
-        evo.save_pkl()
-        exit(0)
-
     elif args.show_evolver:
         evo = get_evolver(args, skip_new=True)
         if args.top_list:
@@ -136,6 +122,9 @@ def main():
 
         # set fast_cycle
         evo.fast_cycle = args.fast_cycle
+        # verbose
+        if args.noverbose:
+            evo.verbose = False
 
         # populate sequences
         evo.populate()
@@ -164,84 +153,59 @@ def main():
         evo.save_pkl()
         print(evo)
         exit(0)
-
-    elif args.insert_sequence:
-        evo = get_evolver(args)
-        # insert sequence into Evolver.to_include list
-        try:
-            evo.to_include.append(args.insert_sequence)
-        except:
-            evo.to_include = [args.insert_sequence]
-        exit(0)
     
     elif args.show_lists:
         evo = get_evolver(args)
         # show sequences
         logger.info('Showing sequences\n')
-        logger.info('Evolver.sequences')
+        print('Evolver.sequences')
         total = 0
         i = 0
         for seq in evo.sequences:
-            logger.info(f'{seq}')
+            print(f'{seq}')
             i += 1
-        logger.info(f'--> {i} sequences found\n')
+        print(f'--> {i} sequences found\n')
         total += i
         # parents
-        logger.info('Evolver.parent_sequences')
+        print('Evolver.parent_sequences')
         i = 0
         for seq in evo.parent_sequences:
-            logger.info(f'{seq}')
+            print(f'{seq}')
             i += 1
-        logger.info(f'--> {i} sequences found\n')
+        print(f'--> {i} sequences found\n')
         total += i
         # discarded
-        logger.info('Evolver.discarded_sequences')
+        print('Evolver.discarded_sequences')
         i = 0
         for seq in evo.discarded_sequences:
-            logger.info(f'{seq}')
+            print(f'{seq}')
             i += 1
-        logger.info(f'--> {i} sequences found\n')
+        print(f'--> {i} sequences found\n')
         total += i
         # excluded sequences
-        logger.info('Evolver.excluded_sequences')
+        print('Evolver.excluded_sequences')
         i = 0
         for seq in evo.excluded_sequences:
-            logger.info(f'{seq}')
+            print(f'{seq}')
             i += 1
-        logger.info(f'--> {i} sequences found\n')
+        print(f'--> {i} sequences found\n')
         total += i
         # total
-        logger.info(f'Total: {total} sequences')
+        print(f'Total: {total} sequences')
         exit(0)
     
     elif args.plot_evolution:
         evo = get_evolver(args)
         # plot_evolution
-        evo.plot_evolution(show_std=args.show_std, show_kids=args.show_kids)
+        evo.plot_evolution(show_std=args.show_std, show_kids=args.show_kids, name=args.plot_name)
         exit(0)
 
     elif args.last_generation:
-        import math
-        evo = get_evolver(args)
-        # list with sequences evaluated
-        evo.discarded_sequences = [k for k in evo.discarded_sequences if k.get_mean_fitness() is not None and not math.isnan(k.get_mean_fitness())]
-        evo.parent_sequences = []
-        evo.sequences = []
-        evo.generations = max(set([k.generation for k in evo.discarded_sequences]))
-        print(f"Las completed generation: {evo.generations}")
-        print(f"Completed sequences: {len(evo.discarded_sequences)}")
-        evo.sort_sequences()
-        evo.save_pkl()  # save after sorting
-        evo.populate()
-        evo.save_pkl()  # save again
+        evo = get_evolver(args, skip_new=True)
+        logger.info('Going back to the last completed generation . . .')
+        evo.revert_last_generation()
+        evo.save_pkl()  # save updated state
         print(evo)
-
-    elif args.test:
-        """
-        This sections is used to include testing code
-        """
-        evo = get_evolver(args)
-        evo.sequence_backup()
         exit(0)
 
 if __name__ == '__main__':

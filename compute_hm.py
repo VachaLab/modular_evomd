@@ -1,3 +1,4 @@
+# === compute_hm.py ===
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def calculator_check(sequence) -> bool:
     except:
         sequence.check_times = 1
         return False
+    return False
 
 def analyzer_method(sequence) -> float:
     from sequence_geometry import compute_hm_scalar, compute_helix_positions

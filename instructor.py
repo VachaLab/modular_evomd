@@ -1,4 +1,4 @@
-# === instructor_modular.py ===
+# === instructor.py ===
 """
 This script reads an instruction file and sets attributes on the Instructor class.
 The Instructor class should have default values related to the evolution process,
@@ -48,9 +48,6 @@ class Instructor:
     extra_mutation = Instruction(bool, True)  # Additional mutation based on also_mutate_probability
     also_mutate_probability = Instruction(float, 0.1, range=[0, 1])  # probability of mutating (only used if extra_mutation = true)
     include_parents = Instruction(bool, False)   # to include parents in next iteration
-    include_resurrection = Instruction(bool, False)  # test again a random discarded sequence
-    resurrection_probability = Instruction(float, 0.001)  # probability of resurrection instead of generate sequence
-    populate_discarded = Instruction(bool, False)  # use discarded sequences to create new sequences
     avoid_reinsertion = Instruction(bool, True)  # a previously tested sequence turns into forbidden
     # --- for faces method ---
     face_slice_angle = Instruction(float, 180, range=[0, 360])  # slice angle: half of the angle on each side of hydrophobic vector
@@ -96,7 +93,6 @@ class Instructor:
     
     iterations_elite = Instruction(int, 3)  # Iterations before setting elite
     elite_ratio = Instruction(float, 0.01)  # A maximum of 1% of the sequences can be elite
-    elite_bias = Instruction(float, 2.0)  # if 1 --> no bias applied in choosing method. only if populate_weighted is True
 
     # --- external methods ---
     constructor = Instruction(str, '')  # name of the constructor library
@@ -209,10 +205,7 @@ class Instructor:
 
     def _build_single_method(self, met):
         """
-        Builds and returns a single GenMethod instance for the method name
-        `met`. Flanks is intentionally NOT handled here: it is a wrapper and
-        is assembled separately in set_gen_methods() to avoid recursion.
-        Returns None for unknown names.
+        Builds and returns a single GenMethod instance
         """
         if met == 'hybrids':
             from hybrid import Hybrid
@@ -242,24 +235,8 @@ class Instructor:
 
     def set_gen_methods(self):
         """
-        Builds the working methods and the initial (no-parent) method from
+        Builds the working methods and the initial method from
         populate_method and method_weights.
-
-        Returns
-        -------
-        (methods, weights, initial_method) : tuple
-            methods         : list[GenMethod] passed to Generator.methods
-            weights         : list[float] aligned with methods
-            initial_method  : GenMethod | None used by Generator for the
-                              no-parent (first-fill) call.
-
-        Special rules
-        -------------
-        - 'pattern' is exclusive: it cannot be combined with any other method.
-        - 'flanks' forces the initial method to be Flanks itself, and wraps the
-          remaining selected methods as its inner methods (never Flanks itself,
-          so it is not recursive). The inner methods are NOT registered loose
-          in the Generator; only Flanks is.
         """
         # Normalize / validate weights against populate_method.
         if len(self.populate_method) == 1:
@@ -329,6 +306,9 @@ class Instructor:
         return methods, weights, None
 
     def configure_generator(self) -> None:
+        """
+        Configures the generator and assign it to self.generator attribute
+        """
         rest_list = self.configure_restrictions()
         methods, weights, initial = self.set_gen_methods()
 
@@ -343,10 +323,6 @@ class Instructor:
             initial_method=initial,
         )
         self.generator = gen
-
-
-    
-
 
 if __name__ == '__main__':
     pass
