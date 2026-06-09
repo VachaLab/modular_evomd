@@ -171,7 +171,7 @@ class Flanks(GenMethod):
         """
         Selects one inner method whose expected_parents requirement is met
         by the number of available parents. Returns None when no inner method
-        is eligible (caller falls back to a core mutation).
+        is eligible.
         """
         eligible = [
             (m, w) for m, w in zip(self.methods, self.weights)
@@ -210,7 +210,9 @@ class Flanks(GenMethod):
         core2 = self._strip_flanks(seq2) if seq2 is not None else None
 
         inner = self._select_inner(available_parents)
-        print(f"n_flank='{self.n_flank}'  c_flank='{self.c_flank}'  mode={inner.method_name}")
+        
+        if verbose:
+            print(f"n_flank='{self.n_flank}'  c_flank='{self.c_flank}'  mode={inner.method_name}")
         
         core_seq1 = Sequence(core1)
         core_seq2 = Sequence(core2)

@@ -1,4 +1,29 @@
 # === manager.py ===
+"""
+Manager: orchestrates the per-sequence simulation lifecycle for the Evolver.
+
+The Manager is the bridge between the Evolver and the user-supplied external
+modules (constructor / calculator / analyzer, named in the Instructor). For
+each sequence in the Evolver's current population, it runs the iteration steps
+in order: construct the simulation system, launch the calculation, poll until
+it finishes, and analyze the result into a fitness value.
+
+Responsibilities:
+  - Directory layout: one directory per sequence under evomd_directory, with a
+    numbered iter_N subdirectory per simulation attempt.
+  - Method dispatch: each external function is looked up by name from its module
+    and executed inside the sequence's iteration directory.
+  - State bookkeeping: sets the Sequence flags (is_just_constructed, is_running,
+    is_waiting_analysis, is_failed) and counters as each step progresses.
+  - Recovery: on a restarted session, inspects sequence state to decide which
+    steps can be skipped.
+
+The external functions follow a fixed interface (constructor_method,
+calculator_method, calculator_check, analyzer_method), each taking the Sequence
+as `sequence=` and, where relevant, returning a value (readiness bool / fitness
+float).
+"""
+
 import os
 import logging
 from utils import get_module_function, current_time
@@ -10,6 +35,16 @@ logger = logging.getLogger(__name__)
 
 
 class Manager:
+    """
+    Runs the construct/calculate/check/analyze cycle over the Evolver's
+    sequences, managing their directories and external-method dispatch.
+
+    Class attributes:
+        iter_dir_prefix (str): Prefix for per-attempt iteration subdirectories.
+        contructor_name / calculator_name / calculator_check / analyzer_name /
+        penalty_name (str): Names of the functions looked up in the user modules.
+    """
+
     name = 'manager'
     iter_dir_prefix = 'iter_'
     contructor_name = 'constructor_method'
@@ -19,6 +54,13 @@ class Manager:
     penalty_name = 'penalty_method'
 
     def __init__(self, evolver):
+        """
+        Bind the Manager to its Evolver and ensure the base directory exists.
+
+        Args:
+            evolver (Evolver): The owning Evolver; used to reach the Instructor
+                configuration and the current sequence lists.
+        """
         self.evolver = evolver
         self.base_dir = os.path.join(
             self.evolver.instructor.cwd, 
@@ -29,7 +71,7 @@ class Manager:
     # create directories and manage them ---------------------
     @contextmanager
     def working_directory(self, path):
-        """Context manager to temporarily change the working directory."""
+        """Temporarily chdir into `path`, restoring the previous cwd on exit."""
         prev_cwd = os.getcwd()
         os.chdir(path)
         try:
@@ -38,6 +80,7 @@ class Manager:
             os.chdir(prev_cwd)
 
     def create_sequence_directory(self, seq) -> None:
+        """Create the base directory for a sequence and record it on the object."""
         directory = os.path.join(self.base_dir, str(seq))
         os.makedirs(directory, exist_ok=True)
         logger.debug(f'Manager: Directory created for sequence {str(seq)}')
@@ -45,6 +88,13 @@ class Manager:
         seq.directory = directory
 
     def create_iteration_directory(self, seq) -> None:
+        """
+        Create the iter_N subdirectory for the sequence's next attempt.
+
+        Ensures the sequence has a base directory first, then creates the
+        attempt directory (numbered from simulation_attempts + 1) and stores it
+        as seq.last_iter_dir.
+        """
         if not seq.has_directory:
             logger.debug(f'Manager: Sequence without directory: {str(seq)} --> creating directory')
             self.create_sequence_directory(seq)
@@ -54,6 +104,18 @@ class Manager:
 
     # execute functions -----------------  before these, execute create_iteration_directory()
     def execute_method(self, seq, method, return_value=False) -> None:
+        """
+        Run an external method for a sequence inside its iteration directory.
+
+        Args:
+            seq (Sequence): The sequence passed to the method as `sequence=`.
+            method (callable): The external function to run.
+            return_value (bool): If True, return the method's result; otherwise
+                run it for its side effects only.
+
+        Returns:
+            The method's return value when return_value is True, else None.
+        """
         seq_id = str(seq)
         with self.working_directory(seq.last_iter_dir):
             logger.info(f"Manager: execute_method: sequence '{seq_id}', directory '{seq.last_iter_dir}'")
@@ -65,7 +127,12 @@ class Manager:
     # run codes ---------------------
     def run_constructors(self):
         """
-        creates iteration directory and sets Sequence.last_iter_dir
+        Run the constructor for every current sequence.
+
+        Looks up constructor_method in the configured constructor module, then
+        for each sequence creates its iteration directory, runs the constructor
+        there, and marks it is_just_constructed. Exits if no constructor module
+        is configured; per-sequence errors are logged and skipped.
         """
         constructor_module = self.evolver.instructor.constructor
         if not constructor_module:
@@ -88,9 +155,12 @@ class Manager:
 
     def run_calculators(self):
         """
-        Runs calculations in external software and sets 
-        Sequence.is_running = True
-        and Sequence.simulation_attempts += 1
+        Launch the calculation for every current sequence.
+
+        Looks up calculator_method in the configured calculator module. For each
+        sequence, increments simulation_attempts, runs the calculator, and marks
+        it is_running (and no longer just-constructed). Exits if no calculator
+        module is configured; per-sequence errors are logged and skipped.
         """
         logger.info(f'Manager: run_calculators: {current_time()}')
         calculator_module = self.evolver.instructor.calculator
@@ -117,11 +187,14 @@ class Manager:
     
     def run_checkers(self):
         """
-        Runs checkers to identify finished simulaltions and sets
-        Sequence.is_running = False
-        Sequence.is_waiting_analysis = True / False
-        Sequence.failed_simulations += 1 if simulation failed
-        Sequence.is_failed = True
+        Poll running simulations until they finish or the cycle budget is spent.
+
+        Looks up calculator_check in the calculator module and repeatedly calls
+        it for each running sequence. A sequence reported ready is marked
+        is_running=False, is_waiting_analysis=True. Between rounds the Manager
+        sleeps for instructor.sleep_time. Once instructor.max_check_cycle is
+        reached, any sequence not yet waiting for analysis is marked failed.
+        Exits if no calculator module is configured.
         """
         logger.info(f'Manager: run_checkers: {current_time()}')
         calculator_module = self.evolver.instructor.calculator
@@ -134,7 +207,8 @@ class Manager:
         # set to False: True when all calculations are ready
         
         logger.debug('Manager: looking for running sequences')
-        seq_ready_status = [not s.is_running for s in self.evolver.sequences]  # this list must be all true to stop while.
+        # All entries must become True for the polling loop to stop.
+        seq_ready_status = [not s.is_running for s in self.evolver.sequences]
         logger.debug('Manager: Running sequences {}'.format(len(seq_ready_status)))
 
         # loop to check computations several times
@@ -154,13 +228,13 @@ class Manager:
                 except Exception as e:
                     logger.error(f"Manager: Error checking sequence '{seq}': {e}")
                     continue
-            # if not all_ready, wait
+            # if not all ready yet and budget remains, wait before re-polling
             if not all(seq_ready_status) and check_cycles < self.evolver.instructor.max_check_cycle:
-                # Si no todos los cálculos están listos, espera antes de volver a intentar
-                sleep_time = self.evolver.instructor.sleep_time  # Obtiene el tiempo de espera desde Instructor
+                sleep_time = self.evolver.instructor.sleep_time
                 logger.info(f"Manager: Waiting for {sleep_time} seconds before rechecking.")
                 time.sleep(sleep_time)
                 check_cycles += 1
+            # budget spent: mark every still-unfinished sequence as failed
             if check_cycles >= self.evolver.instructor.max_check_cycle:
                 logger.warning(f"Manager: Maximun checking cycles ({self.evolver.instructor.max_check_cycle}) exceeded.")
                 for seq in self.evolver.sequences:
@@ -175,11 +249,13 @@ class Manager:
 
     def run_analyzer(self):
         """
-        Analyze simulations if Sequence.is_waiting_analysis = True
-        Sets:
-        Sequence.is_waiting_analysis = False
-        Sequence.completed_simulations += 1
+        Analyze finished simulations into fitness values.
 
+        Looks up analyzer_method in the analyzer module. For each sequence
+        waiting for analysis, runs the analyzer, appends the returned value to
+        its fitness_list, clears is_waiting_analysis, and increments
+        completed_simulations. Exits if no analyzer module is configured;
+        per-sequence errors are logged and skipped.
         """
         logger.info(f'Manager: run_analyzer: {current_time()}')
         # get analyzer module
@@ -209,13 +285,17 @@ class Manager:
     # recover methods ----------------------------------------------
     def recover_pending_sequences(self, step_flags: dict) -> dict:
         """
-        Recover state of sequences and update step_flags dict to skip already completed steps.
+        Inspect sequence state to decide which iteration steps to re-run.
+
+        On a restarted session, examines each sequence's flags to find the
+        furthest-along pending step and disables steps already completed. If the
+        population is incomplete, all steps are disabled (nothing to resume).
 
         Args:
-            step_flags (dict): Dictionary controlling which steps are still needed.
+            step_flags (dict): Initial step plan (construct/calculate/check/analyze).
 
         Returns:
-            dict: Updated step_flags after inspecting sequence states.
+            dict: The adjusted step plan after inspecting sequence states.
         """
         logger.info("Manager: Recovering pending sequences from last session...")
         sequences = self.evolver.sequences
@@ -234,20 +314,19 @@ class Manager:
         need_check = []
         need_analyze = []
         for seq in sequences:
-            # is it just constructed? --> run simulations
-            try:  # try this, since Sequence.is_just_constructed was defined a posteriori
+            # constructed but not yet calculated --> needs the calculate step
+            try:  # guarded: is_just_constructed was added to Sequence later
                 need_calculate.append(seq.is_just_constructed)
             except:
                 need_calculate.append(False)
 
-            # is it runnig simulations? --> check simulations
+            # currently running --> needs the check step
             need_check.append(seq.is_running)
 
-            # is it waiting for analysis? --> analysis
+            # finished but not analyzed --> needs the analyze step
             need_analyze.append(seq.is_waiting_analysis)
 
-        # shut down redundant steps
-
+        # Enable each step if it (or any earlier pending step) has work to do.
         step_flags = {
             'construct': False,
             'calculate': any(need_calculate),

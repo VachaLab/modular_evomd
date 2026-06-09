@@ -101,6 +101,7 @@ class FacesMix(GenMethod):
         if verbose:
             ornament = int((30 - len(self.method_name))/2)
             print(f"{'-' * ornament} {self.method_name} {'-' * ornament}")
+            print(f"Slice angle: {self.slice_angle}")
         s1 = str(seq1)
         s2 = str(seq2)
 
@@ -125,8 +126,6 @@ class FacesMix(GenMethod):
         # Randomly assign which parent is the base (A) and which is the
         # donor (B).
         if random.random() < 0.5:
-            parent_a, parent_b = parent_a, parent_b
-        else:
             parent_a, parent_b = parent_b, parent_a
 
         if verbose:

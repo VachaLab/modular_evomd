@@ -67,7 +67,7 @@ class Instructor:
     # --- population ----------------------------------------------------------
     mut_aa = Instruction(str, 'ACDEFGHIKLMNPQRSTVWY')  # residue pool for mutations (default: all 20 natural amino acids)
     peptide_len = Instruction(int, 22)                 # length of every peptide in the population
-    population = Instruction(int, 120)                 # number of sequences simulated per generation
+    population = Instruction(int, 32)                 # number of sequences simulated per generation
     populate_method = Instruction(
         (str, list),
         ['swap'],
@@ -105,7 +105,7 @@ class Instructor:
     # --- restrictions --------------------------------------------------------
     # Each restriction below is only applied when its *_restriction flag is True
     # (or, for the count/pattern ones, when the relevant value is non-default).
-    hydrophobic_restriction = Instruction(bool, True)  # enforce hydrophobic-moment bounds
+    hydrophobic_restriction = Instruction(bool, False)  # enforce hydrophobic-moment bounds
     hydrophobic_min = Instruction(float, 5.5)          # minimum hydrophobic moment
     hydrophobic_max = Instruction(float, +100)         # maximum hydrophobic moment
 

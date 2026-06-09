@@ -97,7 +97,7 @@ class Swap(GenMethod):
 
         # Randomly assign receptor (A) and donor (B).
         if random.random() < 0.5:
-            parent_a, parent_b = parent_a, parent_b
+            parent_a, parent_b = parent_b, parent_a
 
         if verbose:
             print(f"{parent_a} <- Parent 1")
