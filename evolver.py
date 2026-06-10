@@ -168,7 +168,14 @@ class Evolver:
             show_kids (bool): Scatter individual fitness values per generation.
             name (str): Output image filename.
         """
-        import math
+        import matplotlib
+        import os
+        # Look for GUI
+        has_gui = True
+        if os.name == 'posix' and 'DISPLAY' not in os.environ and 'WAYLAND_DISPLAY' not in os.environ:
+            matplotlib.use('Agg')  # Configure without GUI
+            has_gui = False
+
         import matplotlib.pyplot as plt
 
         # get all sequences with fitness
@@ -234,11 +241,21 @@ class Evolver:
         else:
             ax.legend(loc='best')
 
-        # plt.xticks(np.arange(min(avail_gens), max(avail_gens)+1, 1))  # from 0 to 9, 1 by 1
-
         fig.tight_layout()
-        plt.show()
+
+        # Try to show plot
+        if has_gui:
+            try:
+                plt.show()
+            except Exception as e:
+                # Camptures Errors
+                print(f"Evolver: No GUI available. Showing is not possible. Error: {e}")
+
+        # Save
         fig.savefig(name, dpi=300)
+        
+        # Close figure
+        plt.close(fig)
 
     # validate and find sequences ------------------------------------------------------
     def is_valid_sequence(self, seq) -> bool:

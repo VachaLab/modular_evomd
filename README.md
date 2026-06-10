@@ -2,6 +2,11 @@
 
 EvoMD is an evolutionary optimization framework for peptide sequences. It evolves a population of peptides based on a user-defined fitness function evaluated via simulation modules written and plugged in by user. The configuration is stored in a single YAML file, and the state is serialized to evolver.pkl after every step.
 
+The general process begins with a random population that is continuously evaluated and sorted. The worst performers are discarded, and the population is renewed through crossover of the best sequences. The result is an optimized population of sequences. 
+
+![EvoMD process](images/evomd_process.png)
+
+
 ---
 
 ## Dependencies
@@ -14,51 +19,35 @@ pip install numpy pyyaml matplotlib
 
 ---
 
-## How it works
-
-Each generation EvoMD:
-
-1. **Constructs** simulation systems for the current population.
-2. **Runs** your external simulation (or any fitness computation).
-3. **Checks** when each simulation finishes.
-4. **Analyzes** results into a fitness value per sequence.
-5. **Sorts** sequences, keeps the best as parents, and generates the next generation.
-
-User controls what happens in steps 1–4 by writing a Python plug-in with four functions and calling it in the YAML. EvoMD handles the rest.
-
-The general idea of the modular architecture is shown in the next figure:
-
-![EvoMD architecture](images/evomd_architecture.png)
-
----
-
 ## Quickstart
 
 This example uses `test_hm.py` (included), which maximizes the hydrophobic moment of 20-residue peptides with no real simulation.
 
-**1. Save this as `input.yaml`:**
+**1. Create an `input.yaml`:**
 
 ```yaml
-optimize: maximize
-population: 32
-peptide_len: 20
-populate_method: swap
-extra_mutation: True
-also_mutate_probability: 0.1
-parents_ratio: 0.25
+optimize: maximize  # maximize or minimize
+population: 32  # how many sequences in the population?
+peptide_len: 20  # peptide lenght
+populate_method: swap  # hybrids and swap work better
+extra_mutation: True  # Random point mutation
+also_mutate_probability: 0.1  # 10% of the new sequences are mutated
+parents_ratio: 0.25  # Parents are chosen from the 25% of the population
 
-constructor: test_hm
-calculator:  test_hm
-analyzer:    test_hm
+# User must write the name of the python script with the external methods.
+# These are external methods.
+constructor: test_hm  # script for contructing simulation box.
+calculator:  test_hm  # running and checking simulations.
+analyzer:    test_hm  # Analysis and computation of fitness values.
 
 sleep_time: 0
 max_check_cycle: 50
 max_generations: 50
 
-hindex_restriction: True
-hindex_min: -8
-hdistribution_restriction: True
-hdistribution_threshold: 0.9
+hydrophobic_restriction: False  # change to True for 
+hydrophobic_min: 5.5   # ignored while hydrophobic_restriction is False
+hydrophobic_max: None  # no max limit
+
 ```
 
 **2. Create the Evolver:**
@@ -80,6 +69,24 @@ python evo-md.py --show-evolver
 python evo-md.py --report-sequences            # writes sequences_report.csv
 python evo-md.py --plot-evolution --show-kids  # plots and saves as evolution.png
 ```
+
+---
+
+## How it works
+
+Each generation EvoMD:
+
+1. **Constructs** the simulation box (constructor_method).
+2. **Runs** the simulation (calculator_method).
+3. **Checks** if simulations finished (calculator_check).
+4. **Analyzes** results and computes fitness (analyzer_method).
+5. **Sorts** sequences, keeps the best as parents, and generates the next generation.
+
+Users have the control of steps 1–4 by writing a Python plug-in with four functions and calling it in the YAML (see next section). EvoMD handles the rest.
+
+The general idea of the modular architecture is shown in the next figure:
+
+![EvoMD architecture](images/evomd_architecture.png)
 
 ---
 
@@ -159,4 +166,26 @@ python evo-md.py --last-generation
 Then continue with `--start`.
 
 ---
+
+## Update version
+
+Use the old version to create a sequence report in CSV format.
+
+```bash
+python scripts_old/evo-md.py --report-sequences
+```
+
+Update input.yaml with new variable names (some variables were refactores for better comprehention).
+
+Create evolver.pkl and read report with the new version.
+
+```bash
+python scripts_new/evo-md.py --create-evolver --file input.yaml --read-report sequence_report.csv
+```
+
+Start evolution with the new version
+
+```bash
+python scripts_new/evo-md.py --start
+```
 
