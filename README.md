@@ -189,3 +189,51 @@ Start evolution with the new version
 python scripts_new/evo-md.py --start
 ```
 
+---
+
+## Running on LUMI
+
+You can run evo-md using a LUMI container wrapper.
+The next instructions were adapted from LUMI Documentation.
+https://docs.lumi-supercomputer.eu/software/installing/container-wrapper/
+
+Load the LUMI container module.
+
+```bash
+module load LUMI
+module load lumi-container-wrapper
+```
+
+Create a conda environment file (e.g. env.yml).
+
+```
+# --- env.yml ---
+channels:
+  - conda-forge
+
+dependencies:
+  # Dependencies for evo-md
+  - python>=3.10
+  - numpy
+  - pyyaml
+  - matplotlib
+
+  # Include dependencies for your
+  # external methods (constructor, calculator, analyzer)
+  # e.g. scipy, pymol, vermouth, biopython, etc.
+  - pymol-open-source
+  - vermouth
+```
+
+Create the directory for the container (e.g. env/) and create the container.
+
+```bash
+mkdir env
+conda-containerize new --prefix env env.yml
+```
+
+Execute python from the container.
+
+```bash
+/users/USER/env/bin/python /users/USER/modular_evomd/evo-md.py --help
+```

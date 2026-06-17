@@ -1,28 +1,9 @@
-# === Example Evo-MD input ===
-# Minimal configuration for a test run that maximizes the hydrophobic moment
-# of 20-residue peptides, using the example methods in test_hm.py.
-# Any key not listed here falls back to its Instructor default.
-
 optimize: maximize          # optimization direction: 'maximize' or 'minimize'
 population: 32              # sequences simulated per generation
-peptide_len: 22            # length of every peptide
+peptide_len: 12            # length of every peptide
 populate_method: [         # generation method (single method; weights ignored)
   swap,
 ]
-
-# faces method
-face_slice_angle: 120  # angle of the slice 
-
-# Working with patterns
-# pattern: 
-# pattern_options:
-# pattern_weights:
-# pattern_maxmut:
-
-# Working with flanks
-n_flank: YH
-c_flank: RY
-flank_inner: swap
 
 extra_mutation: True       # apply an extra random point mutation after swap
 also_mutate_probability: 0.1   # probability of that extra mutation per child
@@ -31,21 +12,21 @@ parents_ratio: 0.25        # top 25% of the ranking kept as parents each generat
 # --- external methods ---
 # Names of the Python module(s) (without .py) providing the iteration functions.
 # Here a single module (test_hm.py) supplies all three roles.
-constructor: test_hm       # module with constructor_method(sequence)
-calculator:  test_hm       # module with calculator_method + calculator_check
-analyzer:    test_hm       # module with analyzer_method(sequence) -> fitness
+constructor: constructor
+calculator:  calculations
+analyzer:    analyzer
 
 # --- iteration / timing ---
-sleep_time: 0              # seconds to wait between simulation-status checks (0 = no wait)
-max_check_cycle: 50        # max status-check cycles before unfinished jobs are marked failed
-max_generations: 50        # stop after this many generations
+sleep_time: 1800              # seconds to wait between simulation-status checks (0 = no wait)
+max_check_cycle: 400        # max status-check cycles before unfinished jobs are marked failed
+max_generations: 100        # stop after this many generations
 target_fitness: None       # stop when best fitness reaches this value (None = no target)
 
 # --- restrictions ---
 # Each restriction applies only when its *_restriction flag is True
 # (or, for the count-based ones, when the value is non-default).
-hydrophobic_restriction: False   # hydrophobic-moment bounds (disabled here)
-hydrophobic_min: 5.5             # ignored while hydrophobic_restriction is False
+hydrophobic_restriction: True   # hydrophobic-moment bounds (disabled here)
+hydrophobic_min: 5.0             # ignored while hydrophobic_restriction is False
 hydrophobic_max: None
 
 hindex_restriction: False         # enforce hydrophobic-index bounds
@@ -64,4 +45,4 @@ hdistribution_restriction: False  # enforce a minimum hydrophobicity-distributio
 hdistribution_threshold: 0.9     # minimum accepted distribution score
 
 # --- aa pool ---
-mut_aa: ACDEFGHIKLMNPQRSTVWY     # residues available for mutation (all 20 natural amino acids)
+mut_aa: ADEFKLNQRSTY
