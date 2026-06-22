@@ -162,6 +162,15 @@ def get_arguments() -> argparse.Namespace:
              'simulation directory, then exit.'
     )
 
+    # Populate the Evolver from json backup files found in the
+    # simulation directory, then save and exit.
+    parser.add_argument(
+        '-bk', '--from-backup',
+        action='store_true',
+        help='Populate using backup jason files in the '
+             'simulation directory, then exit.'
+    )
+
     # --- inspection of sequence lists (action) -------------------------------
     # Print the contents of every Evolver list (current, parents, discarded,
     # excluded) with per-list counts and a grand total, then exit.

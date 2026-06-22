@@ -196,6 +196,14 @@ def main():
         # --populate-previous: populate from results of previous simulations
         # found in the simulation directory, then save and exit.
         evo = get_evolver(args)
+        evo.read_directories()
+        evo.save_pkl()
+        exit(0)
+    
+    elif args.from_backup:
+        # --populate-previous: populate from results of previous simulations
+        # found in the simulation directory, then save and exit.
+        evo = get_evolver(args)
         evo.read_previous()
         evo.save_pkl()
         exit(0)

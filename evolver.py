@@ -526,6 +526,67 @@ class Evolver:
     # methods to save and restore sequences ---------------------------------
     def read_previous(self):
         """
+        Build the population from backup in evomd_directory.
+
+        Reads the json file in sequence directory. If it failes to read json
+        the sequences is not created.
+        No analysis is performed in this new version, since the recovery
+        without json file cannot sort sequences by generation.
+        
+        The method Evolver.read_directories analyzes all the sequences in evomd_directory
+        and store them as generation 0.
+        """
+        # read all the sequences in self.instructor.evomd_directory
+        import os
+        import math
+        from utils import read_json
+        self.started = True
+        logger.warning('Evolver: removing sequences list to include previous calculations')
+        self.sequences = []
+        sequences = os.listdir(self.instructor.evomd_directory)
+        for seq in sequences:
+            if len(seq) != self.instructor.peptide_len:
+                # skip if len does not match
+                logger.warning(f'Evolver: Length does not match "{seq}" (expected {self.instructor.peptide_len}) --> skipping')
+                continue
+            if len(seq) != self.instructor.peptide_len and self.instructor.check_validity:
+                # skip is is not a valid sequence
+                continue
+            # read json file
+            try:
+                seq_dir = os.path.join(self.instructor.cwd, self.instructor.evomd_directory, seq, 'sequence.json')
+                json_data = read_json(seq_dir)
+            except:
+                logger.warning(f"json file not found for {seq} --> skipping")
+                continue
+            # create Sequence object
+            new_seq = Sequence(
+                json_data['sequence'], 
+                generation=int(json_data['generation']),
+                h_scale=json_data['hydrophobic_scale']
+                )
+            # set directories
+            new_seq.has_directory = True
+            new_seq.directory = os.path.join(self.instructor.cwd, self.instructor.evomd_directory, seq)
+            new_seq.last_iter_dir = os.path.join(new_seq.directory, 'iter_1')
+            # set fitness
+            if 'fitness_list' in json_data:
+                new_seq.fitness_list = json_data['fitness_list']
+            else:
+                new_seq.fitness_list = json_data['fitness'] # for old version
+            # append to self.sequences
+            self.sequences.append(new_seq)
+        # remove fitness None and nan
+        self.sequences = [k for k in self.sequences if k.fitness is not None and not math.isnan(k.fitness)]
+        # sort sequences
+        self.sort_sequences()
+        # showing sequences
+        logger.info(f'Evolver: {len(self.sequences)} in sequences list')
+        logger.info(f'Evolver: {len(self.parent_sequences)} in parent sequences list')
+        logger.info(f'Evolver: {len(self.discarded_sequences)} in discarded sequences list')
+    
+    def read_directories(self):
+        """
         Build the population from previous simulations in evomd_directory.
 
         Treats each entry in the simulation directory as a sequence, wraps it as
