@@ -549,9 +549,10 @@ class Evolver:
                 # skip if len does not match
                 logger.warning(f'Evolver: Length does not match "{seq}" (expected {self.instructor.peptide_len}) --> skipping')
                 continue
-            if len(seq) != self.instructor.peptide_len and self.instructor.check_validity:
+            if self.instructor.check_validity:
                 # skip is is not a valid sequence
-                continue
+                if not self.instructor.generator._passes_restrictions(seq):
+                    continue
             # read json file
             try:
                 seq_dir = os.path.join(self.instructor.cwd, self.instructor.evomd_directory, seq, 'sequence.json')
@@ -607,9 +608,10 @@ class Evolver:
                 # skip if len does not match
                 logger.warning(f'Evolver: Length does not match "{seq}" (expected {self.instructor.peptide_len}) --> skipping')
                 continue
-            if len(seq) != self.instructor.peptide_len and self.instructor.check_validity:
+            if self.instructor.check_validity:
                 # skip is is not a valid sequence
-                continue
+                if not self.instructor.generator._passes_restrictions(seq):
+                    continue
             # create Sequence object
             new_seq = Sequence(seq)
             # set directories

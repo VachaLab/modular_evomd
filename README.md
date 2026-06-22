@@ -237,3 +237,20 @@ Execute python from the container.
 ```bash
 /users/USER/env/bin/python /users/USER/modular_evomd/evo-md.py --help
 ```
+
+## Populating from backup
+
+You can populate Evolver from the json files created after each generation.
+First step is to create a **new evolver** using an input file with an adequate configuration (be sure that peptide_len is equal to the length of the sequences in the backup).
+
+Then populate from backup:
+
+```bash
+python evo-md.py --from-backup
+```
+
+This creates sequences from json files in simulation directory and sort the sequences. The result is an evolver with choosen parents ready to start.
+
+```bash
+python evo-md.py --start
+```
