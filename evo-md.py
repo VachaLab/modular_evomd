@@ -104,6 +104,12 @@ def get_evolver(args, skip_new=False, internal=False):
     evo = None
 
     if args.file and utils.exists(args.file) and not skip_new:
+        if utils.exists(evo_pre):
+            logger.warning("evolver.pkl file found in current directory.")
+            logger.warning("A new evolver.pkl file will be created. Do you want to continue? (y/n): ")
+            reply = input()
+            if reply.lower()[0] != 'y':
+                exit(0)
         # New session created from the YAML instruction file
         inst = Instructor(args.file)
         evo = Evolver(inst)
