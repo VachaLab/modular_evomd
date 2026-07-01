@@ -29,6 +29,8 @@ import random
 import numpy as np
 from manager import Manager
 from sequence_geometry import compute_hm_scalar, compute_helix_positions
+from exceptions_evomd import MethodFailedError, MethodExistError, EmptyPopulationError
+from exceptions_evomd import SequenceNotFoundError
 
 
 logger = logging.getLogger(__name__)
@@ -642,6 +644,8 @@ class Evolver:
         The starting generation is set to the highest generation among the
         loaded (fitness-bearing) sequences; populate() will then increment it
         to the next generation when the run starts.
+
+        Raises FileNotFoundError if report_path does not exist.
         """
         import csv
         import math
@@ -649,7 +653,7 @@ class Evolver:
 
         if not os.path.exists(report_path):
             logger.error(f'Evolver.read_report: report file not found: {report_path}')
-            exit(1)
+            raise FileNotFoundError(f"File {report_path} does not exist.")
 
         # start from clean lists
         self.sequences = []
@@ -710,7 +714,7 @@ class Evolver:
 
         if loaded == 0:
             logger.error('Evolver.read_report: no valid sequences loaded from report')
-            exit(1)
+            raise RuntimeError("No valid sequence loaded from report.")
 
         # mark as started; leave generations at the last fitness-bearing generation
         # so that populate() increments it to the next one on --start
@@ -848,6 +852,8 @@ class Evolver:
         unique Sequence object so it can be moved elsewhere. If the sequence is
         not found in any list, logs an error and exits the process (exit(2)),
         since that indicates an inconsistent state.
+
+        Raises SequenceNotFoundError if the sequences is not found in any list.
         """
         seq = str(seq)
         existing_seq = None
@@ -873,8 +879,8 @@ class Evolver:
             logger.info(f'Evolver: taking_sequence: sequence {seq} is taken')
             return existing_seq
         else:
-            logger.error(f'Evolver: taking_sequence: trying to take {seq} but it wasnot found in any list --> stopping evolution')
-            exit(2)
+            logger.error(f'Evolver: taking_sequence: trying to take {seq} but it wasnot found in any list.')
+            raise SequenceNotFoundError(f"Evolver.take_sequence() cannot find {seq} in any list.")
 
     # going back ----------------------------------------------------
     def revert_last_generation(self):
@@ -887,6 +893,8 @@ class Evolver:
         self.generations is reset to that generation, and the kept sequences are
         redistributed via sort_sequences(). Exits if no valid-fitness sequence
         exists. Backs the --last-generation CLI action.
+
+        Raises RuntimeError if no sequence with fitness is found.
         """
         import math
         logger.info('Evolver: Reverting to last completed generation')
@@ -900,7 +908,7 @@ class Evolver:
 
         if not valid:
             logger.error('Evolver: no sequences with valid fitness found --> cannot revert')
-            exit(1)
+            raise RuntimeError("No sequence with valid fitness was found. Evolver cannnot revert to previous generation.")
 
         # last completed generation = highest generation among evaluated sequences
         last_gen = max(s.generation for s in valid)
@@ -957,6 +965,11 @@ class Evolver:
         simulation systems, run the calculations, poll until they finish, and
         analyze the results into fitness. Afterwards, sequences whose simulation
         failed are moved aside via set_failed().
+        Aborts iteration and exits if self.sequences is empty.
+        Exits if MethodExistError or EmptyPopulationError is received at any step.
+        Continues if MethodFailedError is received with code < len(self.sequences), 
+        otherwise exits.
+        Exits if an unexpected exception is received.
 
         The step plan defaults to all four enabled, but is overridden when:
           - recover_enabled is set: the Manager inspects sequence state and
@@ -971,6 +984,11 @@ class Evolver:
             new_plan (list[bool] | None): Optional explicit step plan of length 4.
         """
         logger.info("Evolver: Starting iteration step")
+
+        # Check if self.sequences contains sequences
+        if len(self.sequences) == 0:
+            logger.error("Evolver.sequences is empty.")
+            exit(1)
 
         step_flags = {
             'construct': True,
@@ -999,9 +1017,21 @@ class Evolver:
             logger.info("Evolver: Running constructor step")
             try:
                 self.manager.run_constructors()
+            except MethodExistError:
+                logger.error("Evolver: iteration requires external methods.")
+                exit(1)
+            except EmptyPopulationError:
+                logger.error("Manager received an empty population.")
+                exit(1)
+            except MethodFailedError as e:
+                if e.code < len(self.sequences):
+                    logger.error(f"Evolver: Some sequences ({e.code}) failed in constructor method. --> trying to continue.")
+                else:
+                    logger.error("Evolver: All the sequences failed in constructor method. --> exit.")
+                    exit(1)
             except Exception as e:
-                logger.error(f"Evolver: Constructor step failed with error: {e}")
-                return
+                logger.error(f"Evolver: Unexpected exception recceived from contructor method: {e}")
+                exit(1)
             # save at the end of each step
             if not self.fast_cycle:
                 self.save_pkl()
@@ -1011,9 +1041,21 @@ class Evolver:
             logger.info("Evolver: Running calculator step")
             try:
                 self.manager.run_calculators()
+            except MethodExistError:
+                logger.error("Evolver: iteration requires external methods.")
+                exit(1)
+            except EmptyPopulationError:
+                logger.error("Manager received an empty population.")
+                exit(1)
+            except MethodFailedError as e:
+                if e.code < len(self.sequences):
+                    logger.error(f"Evolver: Some sequences ({e.code}) failed in calculator method. --> trying to continue.")
+                else:
+                    logger.error("Evolver: All the sequences failed in calculator method. --> exit.")
+                    exit(1)
             except Exception as e:
-                logger.error(f"Evolver: Calculator step failed with error: {e}")
-                return
+                logger.error(f"Evolver: Unexpected exception recceived from calculator method: {e}")
+                exit(1)
             if not self.fast_cycle:
                 self.save_pkl()
 
@@ -1022,6 +1064,9 @@ class Evolver:
             logger.info("Evolver: Checking simulation status")
             try:
                 self.manager.run_checkers()
+            except MethodExistError:
+                logger.error("Evolver: iteration requires external methods.")
+                exit(1)
             except Exception as e:
                 logger.error(f"Evolver: Checker step failed with error: {e}")
                 return
@@ -1033,6 +1078,9 @@ class Evolver:
             logger.info("Evolver: Running analyzer step")
             try:
                 self.manager.run_analyzer()
+            except MethodExistError:
+                logger.error("Evolver: iteration requires external methods.")
+                exit(1)
             except Exception as e:
                 logger.error(f"Evolver: Analyzer step failed with error: {e}")
                 return

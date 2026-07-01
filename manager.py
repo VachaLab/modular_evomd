@@ -29,6 +29,7 @@ import logging
 from utils import get_module_function, current_time
 from contextlib import contextmanager
 import time
+from exceptions_evomd import MethodFailedError, MethodExistError, EmptyPopulationError
 
 
 logger = logging.getLogger(__name__)
@@ -41,17 +42,15 @@ class Manager:
 
     Class attributes:
         iter_dir_prefix (str): Prefix for per-attempt iteration subdirectories.
-        contructor_name / calculator_name / calculator_check / analyzer_name /
-        penalty_name (str): Names of the functions looked up in the user modules.
+        constructor_name / calculator_name / calculator_check / analyzer_name  (str): Names of the functions looked up in the user modules.
     """
 
     name = 'manager'
     iter_dir_prefix = 'iter_'
-    contructor_name = 'constructor_method'
+    constructor_name = 'constructor_method'
     calculator_name = 'calculator_method'
     calculator_check = 'calculator_check'
     analyzer_name = 'analyzer_method'
-    penalty_name = 'penalty_method'
 
     def __init__(self, evolver):
         """
@@ -114,7 +113,7 @@ class Manager:
                 run it for its side effects only.
 
         Returns:
-            The method's return value when return_value is True, else None.
+            The method's return value when return_value is True, else returns None.
         """
         seq_id = str(seq)
         with self.working_directory(seq.last_iter_dir):
@@ -131,16 +130,21 @@ class Manager:
 
         Looks up constructor_method in the configured constructor module, then
         for each sequence creates its iteration directory, runs the constructor
-        there, and marks it is_just_constructed. Exits if no constructor module
-        is configured; per-sequence errors are logged and skipped.
+        there, and marks it is_just_constructed. Raises MethodExistError if no 
+        constructor module is configured and EmptyPopulationError if Evolver.sequences
+        is empty; per-sequence errors are logged and counted in exceptions. 
+        If exceptions > 0 raises MethodFailedError with code=exceptions.
         """
         constructor_module = self.evolver.instructor.constructor
         if not constructor_module:
-            logger.error("Manager: No constructor module defined in Instructor --> exit")
-            exit(2)
+            logger.error("Manager: No constructor module defined in Instructor.")
+            raise MethodExistError("Constructor method was not found.")
+        if len(self.evolver.sequences) == 0:
+            raise EmptyPopulationError("Evolver.sequences is empty. Nothing to construct.")
         # get function from constructor module
-        constructor_function = get_module_function(constructor_module, self.contructor_name, critical=True)
+        constructor_function = get_module_function(constructor_module, self.constructor_name, critical=True)
         # iterate on sequences
+        exceptions = 0
         for seq in self.evolver.sequences:
             try:
                 # be sure that Sequence.last_iter_dir is defined
@@ -150,8 +154,13 @@ class Manager:
                 # set label
                 seq.is_just_constructed = True
             except Exception as e:
-                logger.error(f"Manager: Error while running {self.contructor_name} for sequence '{seq}': {e}")
-                continue   # continue with the next sequence
+                logger.error(f"Manager: Error while running {self.constructor_name} for sequence '{seq}': {e}")
+                exceptions += 1
+                continue
+        
+        if exceptions > 0:
+            raise MethodFailedError("Something went wrong while constructing sequences.", code=exceptions)
+        logger.info(f'Manager: Ending run_constructors function.')
 
     def run_calculators(self):
         """
@@ -159,18 +168,25 @@ class Manager:
 
         Looks up calculator_method in the configured calculator module. For each
         sequence, increments simulation_attempts, runs the calculator, and marks
-        it is_running (and no longer just-constructed). Exits if no calculator
-        module is configured; per-sequence errors are logged and skipped.
+        it is_running (and no longer just-constructed). 
+        Raises MethodExistError if no calculator module is configured and 
+        EmptyPopulationError if Evolver.sequences is empty; 
+        per-sequence errors are logged and counted in exceptions. 
+        If exceptions > 0 raises MethodFailedError
+        with code=exceptions.
         """
         logger.info(f'Manager: run_calculators: {current_time()}')
         calculator_module = self.evolver.instructor.calculator
         if not calculator_module:
-            logger.error("Manager: No calculator module defined in Instructor --> exit")
-            exit(2)
-        
+            logger.error("Manager: No calculator module defined in Instructor.")
+            raise MethodExistError("Calculator method was not found.")
+        if len(self.evolver.sequences) == 0:
+            raise EmptyPopulationError("Evolver.sequences is empty. Nothing to calculate.")
         # get the function
         calculator_function = get_module_function(calculator_module, self.calculator_name, critical=True)
         # iterate on sequences
+        # store number of errors to verify if all the sequences are running
+        exceptions = 0
         for seq in self.evolver.sequences:
             seq.simulation_attempts += 1
             try:
@@ -182,8 +198,13 @@ class Manager:
                 logger.info(f'Sequence {str(seq)} is being simulated')
             except Exception as e:
                 logger.error(f"Manager: Error while running {self.calculator_name} for sequence '{seq}': {e}")
+                exceptions += 1
                 continue
-        logger.info(f'Manager: Ending run_calculators function')
+        
+        # did all the sequences fail?
+        if exceptions > 0:
+            raise MethodFailedError("Execution of calculator method failed for all the sequences.", code=exceptions)
+        logger.info(f'Manager: Ending run_calculators function.')
     
     def run_checkers(self):
         """
@@ -194,13 +215,13 @@ class Manager:
         is_running=False, is_waiting_analysis=True. Between rounds the Manager
         sleeps for instructor.sleep_time. Once instructor.max_check_cycle is
         reached, any sequence not yet waiting for analysis is marked failed.
-        Exits if no calculator module is configured.
+        Raises MethodExistError if no calculator_check module is configured.
         """
         logger.info(f'Manager: run_checkers: {current_time()}')
         calculator_module = self.evolver.instructor.calculator_check
         if not calculator_module:
-            logger.error("Manager: No calculator module defined in Instructor --> exit")
-            exit(2)
+            logger.error("Manager: No calculator_check module defined in Instructor.")
+            raise MethodExistError("Calculator check method was not found.")
         # get function
         logger.debug('Manager: calculator_check value: {}'.format(self.calculator_check))
         calculator_check_function = get_module_function(calculator_module, self.calculator_check, critical=True)
@@ -254,15 +275,15 @@ class Manager:
         Looks up analyzer_method in the analyzer module. For each sequence
         waiting for analysis, runs the analyzer, appends the returned value to
         its fitness_list, clears is_waiting_analysis, and increments
-        completed_simulations. Exits if no analyzer module is configured;
-        per-sequence errors are logged and skipped.
+        completed_simulations. Raises MethodExistError if no analyzer module 
+        is configured; per-sequence errors are logged and skipped.
         """
         logger.info(f'Manager: run_analyzer: {current_time()}')
         # get analyzer module
         analyzer_module = self.evolver.instructor.analyzer
         if not analyzer_module:
-            logger.error("Manager: No analyzer module defined in Instructor --> exit")
-            exit(2)
+            logger.error("Manager: No analyzer module defined in Instructor.")
+            raise MethodExistError("Analyzer method was not found.")
         # get function
         analyzer_function = get_module_function(analyzer_module, self.analyzer_name, critical=True)
 

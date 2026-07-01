@@ -12,14 +12,15 @@ parents_ratio: 0.25        # top 25% of the ranking kept as parents each generat
 # --- external methods ---
 # Names of the Python module(s) (without .py) providing the iteration functions.
 # Here a single module (test_hm.py) supplies all three roles.
-constructor: constructor
-calculator:  calculations
-analyzer:    analyzer
+constructor: test_hm
+calculator:  test_hm
+calculator_check:  test_hm
+analyzer:    test_hm
 
 # --- iteration / timing ---
-sleep_time: 1800              # seconds to wait between simulation-status checks (0 = no wait)
+sleep_time: 0              # seconds to wait between simulation-status checks (0 = no wait)
 max_check_cycle: 400        # max status-check cycles before unfinished jobs are marked failed
-max_generations: 100        # stop after this many generations
+max_generations: 10        # stop after this many generations
 target_fitness: None       # stop when best fitness reaches this value (None = no target)
 
 # --- restrictions ---
