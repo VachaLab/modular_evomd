@@ -197,7 +197,7 @@ class Manager:
         Exits if no calculator module is configured.
         """
         logger.info(f'Manager: run_checkers: {current_time()}')
-        calculator_module = self.evolver.instructor.calculator
+        calculator_module = self.evolver.instructor.calculator_check
         if not calculator_module:
             logger.error("Manager: No calculator module defined in Instructor --> exit")
             exit(2)

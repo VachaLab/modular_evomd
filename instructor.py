@@ -135,7 +135,8 @@ class Instructor:
     # Names of user-supplied Python modules (without .py) providing the
     # functions the Manager calls each iteration.
     constructor = Instruction(str, '')  # module with constructor_method(sequence): prepares each simulation system
-    calculator = Instruction(str, '')   # module with calculator_method(sequence) and calculator_check(sequence)
+    calculator = Instruction(str, '')   # module with calculator_method(sequence). could include calculator_check(sequence)
+    calculator_check = Instruction(str, None)   # module with calculator_check(sequence)
     analyzer = Instruction(str, '')     # module with analyzer_method(sequence): computes and returns the fitness
 
     # --- evo iteration -------------------------------------------------------
@@ -176,6 +177,10 @@ class Instructor:
                 # invalid type/value --> warn and fall back to the default
                 logging.warning(f'Default value in {name}', e, field.default)
                 setattr(self, name, field.default)
+        
+        # Set calculator_check
+        if self.calculator_check is None:
+            self.calculator_check = self.calculator  # Use calculator file if calculator_check is not defined
         ##############################
         # Snapshot the config keys (skips filename and yaml_data) for __str__/__iter__.
         self.__config_keys = list(self.__dict__)[2:]
