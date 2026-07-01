@@ -850,10 +850,8 @@ class Evolver:
 
         Searches discarded, then parent, then current sequences, returning the
         unique Sequence object so it can be moved elsewhere. If the sequence is
-        not found in any list, logs an error and exits the process (exit(2)),
-        since that indicates an inconsistent state.
-
-        Raises SequenceNotFoundError if the sequences is not found in any list.
+        not found in any list, logs an error and Raises SequenceNotFoundError 
+        if the sequences is not found in any list.
         """
         seq = str(seq)
         existing_seq = None
@@ -891,8 +889,7 @@ class Evolver:
         that already have a valid fitness (not None, not nan). Sequences from
         later generations (and any without a valid fitness) are dropped,
         self.generations is reset to that generation, and the kept sequences are
-        redistributed via sort_sequences(). Exits if no valid-fitness sequence
-        exists. Backs the --last-generation CLI action.
+        redistributed via sort_sequences(). Backs the --last-generation CLI action.
 
         Raises RuntimeError if no sequence with fitness is found.
         """
@@ -965,7 +962,8 @@ class Evolver:
         simulation systems, run the calculations, poll until they finish, and
         analyze the results into fitness. Afterwards, sequences whose simulation
         failed are moved aside via set_failed().
-        Aborts iteration and exits if self.sequences is empty.
+
+        Raises EmptyPopulationError if self.sequences is empty.
         Exits if MethodExistError or EmptyPopulationError is received at any step.
         Continues if MethodFailedError is received with code < len(self.sequences), 
         otherwise exits.
@@ -988,7 +986,7 @@ class Evolver:
         # Check if self.sequences contains sequences
         if len(self.sequences) == 0:
             logger.error("Evolver.sequences is empty.")
-            exit(1)
+            raise EmptyPopulationError("Evolver.sequence is empty.")
 
         step_flags = {
             'construct': True,
