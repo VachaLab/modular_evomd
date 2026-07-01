@@ -134,10 +134,11 @@ class Instructor:
     # --- external methods ----------------------------------------------------
     # Names of user-supplied Python modules (without .py) providing the
     # functions the Manager calls each iteration.
-    constructor = Instruction(str, '')  # module with constructor_method(sequence): prepares each simulation system
-    calculator = Instruction(str, '')   # module with calculator_method(sequence). could include calculator_check(sequence)
+    # Default: all the methods are expected in calculator if not defined.
+    constructor = Instruction(str, None)  # module with constructor_method(sequence): prepares each simulation system
+    calculator = Instruction(str, '')   # module with calculator_method(sequence). 
     calculator_check = Instruction(str, None)   # module with calculator_check(sequence)
-    analyzer = Instruction(str, '')     # module with analyzer_method(sequence): computes and returns the fitness
+    analyzer = Instruction(str, None)     # module with analyzer_method(sequence): computes and returns the fitness
 
     # --- evo iteration -------------------------------------------------------
     max_gen_attemps = Instruction(int, 100000)  # max attempts to generate a valid sequence before giving up
@@ -157,6 +158,10 @@ class Instructor:
         Assignment goes through the Instruction descriptor, so invalid values
         fall back to the default with a warning. After loading, the Generator is
         configured from the resulting attributes.
+
+        The external methods names are set from constructor, calculator, 
+        calculator_check and analyzer. If not defined in the input, all the methods 
+        are loaded from calculator.
 
         Args:
             filename (str): Path to the YAML instruction file to read.
@@ -178,9 +183,13 @@ class Instructor:
                 logging.warning(f'Default value in {name}', e, field.default)
                 setattr(self, name, field.default)
         
-        # Set calculator_check
+        # Set external methods
+        if self.constructor is None:
+            self.constructor = self.calculator  # Use calculator file if constructor is not defined
         if self.calculator_check is None:
             self.calculator_check = self.calculator  # Use calculator file if calculator_check is not defined
+        if self.analyzer is None:
+            self.analyzer = self.calculator  # Use calculator file if analyzer is not defined
         ##############################
         # Snapshot the config keys (skips filename and yaml_data) for __str__/__iter__.
         self.__config_keys = list(self.__dict__)[2:]

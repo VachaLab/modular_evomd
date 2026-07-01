@@ -35,9 +35,11 @@ also_mutate_probability: 0.1  # 10% of the new sequences are mutated
 parents_ratio: 0.25  # Parents are chosen from the 25% of the population
 
 # User must write the name of the python script with the external methods.
-# These are external methods.
+# These are external methods. You can include all the methods in one file
+# and define only calculator.
 constructor: test_hm  # script for contructing simulation box.
-calculator:  test_hm  # running and checking simulations.
+calculator:  test_hm  # running.
+calculator_check: test_hm  # checking simulations.
 analyzer:    test_hm  # Analysis and computation of fitness values.
 
 sleep_time: 0
@@ -93,7 +95,6 @@ The general idea of the modular architecture is shown in the next figure:
 ## Writing your own methods
 
 Users must create Python modules with these four functions and name it in the YAML (`constructor`, `calculator`, `analyzer`). All three keys can point to the same file.
-`calculator_method` and `calculator_check` must be in the same python file.
 
 ```python
 def constructor_method(sequence) -> None:
@@ -127,12 +128,10 @@ See `test_hm.py` for a short example.
 | Create a new Evolver and exit | `python evo-md.py --file input.yaml --create-evolver` |
 | Start the evolution loop | `python evo-md.py --file input.yaml --start` |
 | Resume an interrupted iteration | `python evo-md.py --restart` |
-| Stop after the current iteration | `python evo-md.py --stop-evolver` |
 | Show the current state | `python evo-md.py --show-evolver` |
 | Export all sequences to CSV | `python evo-md.py --report-sequences` |
 | Plot fitness over generations | `python evo-md.py --plot-evolution` |
 | Roll back to the last complete generation | `python evo-md.py --last-generation` |
-| Show the loaded configuration | `python evo-md.py --show-current` |
 
 Run `python evo-md.py --help` for the full flag reference.
 
