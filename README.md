@@ -23,7 +23,7 @@ pip install numpy pyyaml matplotlib
 
 This example uses `test_hm.py` (included), which maximizes the hydrophobic moment of 20-residue peptides with no real simulation.
 
-**1. Create an `input.yaml`:**
+**1. Create an `input.yaml` (or use file in test directory):**
 
 ```yaml
 optimize: maximize  # maximize or minimize
@@ -36,7 +36,7 @@ parents_ratio: 0.25  # Parents are chosen from the 25% of the population
 
 # User must write the name of the python script with the external methods.
 # These are external methods. You can include all the methods in one file
-# and define only calculator.
+# and define only calculator (see example in test/input.yaml).
 constructor: test_hm  # script for contructing simulation box.
 calculator:  test_hm  # running.
 calculator_check: test_hm  # checking simulations.
@@ -44,12 +44,13 @@ analyzer:    test_hm  # Analysis and computation of fitness values.
 
 sleep_time: 0
 max_check_cycle: 50
-max_generations: 50
+max_generations: 30
 
-hydrophobic_restriction: False  # change to True for 
-hydrophobic_min: 5.5   # ignored while hydrophobic_restriction is False
-hydrophobic_max: None  # no max limit
+hydrophobic_restriction: False  # restraints in hydrophobic moment
+hydrophobic_min: null   # ignored while hydrophobic_restriction is False
+hydrophobic_max: null   # no max limit
 
+mut_aa: ADEFKLNQRSTY    # only these aa are used
 ```
 
 **2. Create the Evolver:**
@@ -61,15 +62,44 @@ python evo-md.py --file input.yaml --create-evolver
 **3. Run the evolution:**
 
 ```bash
-python evo-md.py --file input.yaml --start
+python evo-md.py --start
 ```
 
 **4. Inspect the results:**
 
 ```bash
-python evo-md.py --show-evolver
+python evo-md.py --show-evolver                # prints the final state of the process
 python evo-md.py --report-sequences            # writes sequences_report.csv
 python evo-md.py --plot-evolution --show-kids  # plots and saves as evolution.png
+```
+
+The plot shows the evolution of the population (black solid line). Green solid line is the average fitness of the kids
+created in each generation. Highest and lowest fitness found in each generation are also presented.
+
+![Evolution process example](images/evolution_example.png)
+
+**5. Plot sequences:**
+
+You can use `peptide_viewer.py` to plot any sequence as $\alpha$-helix. You can show hydrophobic moment computed as described by [Eisenberg](https://doi.org/10.1073/pnas.81.1.140).
+
+The example shows Opi1 peptide (`QKLSRAIAKGKDNLKEYKLNMS`).
+
+```bash
+python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --show-letters
+```
+
+Do you want to see information as shown by [HeliQuest](https://heliquest.ipmc.cnrs.fr)? --> Change hydrophobicity scale and include the information that you need.
+
+```bash
+python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --show-letters --print-hm --print-hi --print-ch --av-hm --h-scale fauchere-pliska
+```
+
+![Opi1 helix view](images/opi1_example.png)
+
+See the available options
+
+```bash
+python peptide_viewer.py --help
 ```
 
 ---
@@ -126,7 +156,7 @@ See `test_hm.py` for a short example.
 | What you want to do | Command |
 |---|---|
 | Create a new Evolver and exit | `python evo-md.py --file input.yaml --create-evolver` |
-| Start the evolution loop | `python evo-md.py --file input.yaml --start` |
+| Start the evolution loop | `python evo-md.py --start` |
 | Resume an interrupted iteration | `python evo-md.py --restart` |
 | Show the current state | `python evo-md.py --show-evolver` |
 | Export all sequences to CSV | `python evo-md.py --report-sequences` |

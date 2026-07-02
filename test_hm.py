@@ -1,7 +1,7 @@
 # === test_hm.py ===
 """
 Example external-methods module for Evo-MD.
-This example can me used with hm_max_example.yaml input file
+This example can me used with input.yaml input file
 in test directory. It performs the maximization of hydrophobic moment.
 
 This is a minimal, self-contained example of the user-supplied module that
@@ -90,7 +90,7 @@ def analyzer_method(sequence) -> float:
     """
     from sequence_geometry import compute_hm_scalar, compute_helix_positions
     positions = compute_helix_positions(sequence)
-    hm = compute_hm_scalar(sequence, positions, average=True)
+    hm = compute_hm_scalar(sequence, positions)
     with open('fitness.txt', 'w') as f:
         f.write(f'seq: {sequence}\nhm: {hm}\ncharge: {sequence.charge}\n{sequence.hydrophobic_scale}\n')
     return hm

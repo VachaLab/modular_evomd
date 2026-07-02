@@ -311,10 +311,12 @@ def set_legends(
 
 # --- Core pipeline ---------------------------------------------------------
 
-def _run_pipeline(args: argparse.Namespace) -> None:
+def _run_pipeline(args: argparse.Namespace) -> dict:
     """
     Executes the full visualization pipeline given a populated Namespace.
     Shared by both main() and plot_sequence().
+    
+    Returns a dictionary with sequence properties (hm, hi, charge)
     """
     seq = Sequence(args.sequence, h_scale=args.h_scale) if isinstance(args.sequence, str) else args.sequence
     cmap = plt.get_cmap(args.cmap)
@@ -343,6 +345,8 @@ def _run_pipeline(args: argparse.Namespace) -> None:
 
     if not args.noshow:
         plt.show()
+    
+    return {'hm': hm_scalar, 'hi': hi_value, 'charge': seq.charge, 'npos': seq.pos_res, 'nneg': seq.neg_res}
 
 
 # --- Public API for notebook / import usage --------------------------------
@@ -543,8 +547,38 @@ def get_arguments() -> argparse.Namespace:
 def main() -> None:
     """CLI entry point."""
     args = get_arguments()
-    _run_pipeline(args)
+    seq_data = _run_pipeline(args)
 
+    # Define text formater
+    formater = lambda x: f"<{x}>" if args.av_hm else f"{x}"
+
+    # print information
+    length = len(args.sequence)
+    print(f"Sequence length: {length} aa\n")
+    aa_count = ""
+    i = 0
+    while i < len(args.sequence):
+        new_count = f"{i+1}" if i % 10 == 0 else ' '
+        aa_count += new_count
+        i += len(new_count)
+    print(aa_count)
+    print(args.sequence, end='\n\n')
+
+    # show radial representation
+    from radial_sequence import get_radial
+    radial = get_radial(seq=args.sequence, h_scale=args.h_scale)
+    print("Radial representation of the core (18 residues)")
+    print(f"{radial}\n")
+
+    # show properties
+    print("Basic properties ---")
+    print(f"Positive residues: {seq_data['npos']}\nNegative residues: {seq_data['nneg']}")
+    print(f"Net charge = {seq_data['charge']}")
+    print(f"{formater('Hm')} = {seq_data['hm']}")
+    print(f"{formater('Hi')} = {seq_data['hi']}")
+
+    if not args.save:
+        print("\nPlot was not saved (use --save)")
 
 if __name__ == '__main__':
     main()

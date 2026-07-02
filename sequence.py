@@ -87,6 +87,8 @@ class Sequence:
         self.charge: float = sum(r.charge for r in self.residues)
         self.n_ter_charge: float = self.residues[0].charge   # charge of the N-terminal residue
         self.c_ter_charge: float = self.residues[-1].charge  # charge of the C-terminal residue
+        self.pos_res: int = sum([1 for k in self.residues if k.charge > 0])  # number of positive residues
+        self.neg_res: int = sum([1 for k in self.residues if k.charge < 0])  # number of negative residues
 
         # Fitness history: one entry per evaluation; mean exposed via `fitness`
         self.fitness_list: List[float] = []

@@ -46,7 +46,7 @@ def _get_res_sec(sec: int, residues: list) -> str:
     return '-'
 
 
-def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
+def get_radial(seq: Sequence | str, exclude: list[int] | None = None, h_scale='eisenberg') -> str:
     """
     Converts a primary peptide sequence into an 18-position radial sequence
     based on the alpha-helix projection aligned to the hydrophobic moment.
@@ -62,6 +62,8 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
               computing the core. If None, the core is selected automatically
               by trimming residues symmetrically from both termini, with any
               odd remainder removed from the C-terminal end.
+    h_scale : Hydrophobic scale used for computing hydrophobic moment. Used if
+              seq is not a Sequence object.
 
     Returns
     -------
@@ -72,7 +74,7 @@ def get_radial(seq: Sequence | str, exclude: list[int] | None = None) -> str:
     """
     # Normalize input to Sequence
     if not isinstance(seq, Sequence):
-        seq = Sequence(seq)
+        seq = Sequence(seq, h_scale=h_scale)
 
     # Compute helix geometry on the full sequence before trimming,
     # so that the hydrophobic moment reflects the complete peptide.
