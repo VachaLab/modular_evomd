@@ -134,7 +134,8 @@ class Evolver:
             positions = compute_helix_positions(seq)
             fitness = seq.fitness
             fitness = f"{fitness:<8.4f}" if fitness is not None else f"{'-':<8}"
-            hm = f"{round(compute_hm_scalar(seq, positions), 3)}"
+            hm = compute_hm_scalar(seq, positions, average=self.instructor.average_hm)
+            hm = f"{round(hm, 3)}"
             gen = seq.generation
             ch = f"{round(seq.charge, 1)}"
             lines.append(f"{i+1:<24}: {str(seq):<{pep_len}} {gen:<5} {fitness:<8} {hm:<8} {ch:<8}\n")
@@ -402,7 +403,7 @@ class Evolver:
                     if not self.is_valid_sequence(sq):
                         logger.warning(f'Evolver: Sequence "{sq}" is an excluded sequence --> skipping')
                         continue
-                self.sequences.append(Sequence(sq))
+                self.sequences.append(Sequence(sq, h_scale=self.instructor.hydrofobic_scale))
     
     def include_sequences(self):
         """
@@ -429,7 +430,7 @@ class Evolver:
                 candidate = self.take_sequence(candidate)
                 candidate.check_reinsertion(iterations_preferent=self.instructor.iterations_elite)
             else:
-                candidate = Sequence(candidate, generation=self.generations)
+                candidate = Sequence(candidate, generation=self.generations, h_scale=self.instructor.hydrofobic_scale)
             self.sequences.append(candidate)
         # restart to_include list
         self.to_include = []
@@ -476,7 +477,7 @@ class Evolver:
                         print('Sequence already exists --> discarding')
                     continue
                 logger.info(f'New sequence: {candidate}')
-                self.sequences.append(Sequence(candidate))
+                self.sequences.append(Sequence(candidate, h_scale=self.instructor.hydrofobic_scale))
             return
 
         # --- subsequent generations ---
@@ -524,7 +525,7 @@ class Evolver:
                 continue
 
             logger.info(f'New sequence: {candidate}')
-            self.sequences.append(Sequence(candidate, generation=self.generations))
+            self.sequences.append(Sequence(candidate, generation=self.generations, h_scale=self.instructor.hydrofobic_scale))
 
         # --- handle the parents now that generation is done ---
         if self.instructor.include_parents:
@@ -626,7 +627,7 @@ class Evolver:
                 if not self.instructor.generator._passes_restrictions(seq):
                     continue
             # create Sequence object
-            new_seq = Sequence(seq)
+            new_seq = Sequence(seq, h_scale=self.instructor.hydrofobic_scale)
             # set directories
             new_seq.has_directory = True
             new_seq.directory = os.path.join(self.instructor.cwd, self.instructor.evomd_directory, seq)
@@ -715,7 +716,7 @@ class Evolver:
                         continue
 
                 # build Sequence; fitness is a read-only property, set it via fitness_list
-                new_seq = Sequence(raw_seq, generation=generation)
+                new_seq = Sequence(raw_seq, generation=generation, h_scale=self.instructor.hydrofobic_scale)
                 new_seq.fitness_list = [fitness]
                 self.sequences.append(new_seq)
 

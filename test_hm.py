@@ -1,6 +1,8 @@
 # === test_hm.py ===
 """
 Example external-methods module for Evo-MD.
+This example can me used with hm_max_example.yaml input file
+in test directory. It performs the maximization of hydrophobic moment.
 
 This is a minimal, self-contained example of the user-supplied module that
 Evo-MD calls each iteration. It is NOT part of the core project; it exists to
@@ -13,8 +15,8 @@ A module like this provides the four functions the Manager looks up by name:
     analyzer_method(sequence)    -> float
 
 You point the Instructor at this module through the YAML keys `constructor`,
-`calculator`, and `analyzer` (here all three are 'test_hm'). The same module may
-provide all four functions, as it does below.
+`calculator`, `calculator_check` and `analyzer` (here all four are 'test_hm'). 
+The same module may provide all four functions, as it does below.
 
 Each function receives the Sequence object as the keyword argument `sequence`
 and runs inside that sequence's iteration directory. In this example the
@@ -88,9 +90,9 @@ def analyzer_method(sequence) -> float:
     """
     from sequence_geometry import compute_hm_scalar, compute_helix_positions
     positions = compute_helix_positions(sequence)
-    hm = compute_hm_scalar(sequence, positions)
+    hm = compute_hm_scalar(sequence, positions, average=True)
     with open('fitness.txt', 'w') as f:
-        f.write(f'seq: {sequence}\nhm: {hm}\ncharge: {sequence.charge}\n')
+        f.write(f'seq: {sequence}\nhm: {hm}\ncharge: {sequence.charge}\n{sequence.hydrophobic_scale}\n')
     return hm
 
 

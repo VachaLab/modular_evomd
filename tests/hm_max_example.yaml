@@ -18,7 +18,7 @@ calculator:  test_hm
 # analyzer:    test_hm
 
 # --- scales ---
-hydrofobic_scale: eisenberg  # other options: kyte-doolittle, wimley-white, fauchere-pliska
+hydrofobic_scale: fauchere-pliska  # other options: kyte-doolittle, wimley-white, eisenberg (default)
 average_hm: True  # set to True to compute the average of hm and hi
 
 # --- iteration / timing ---
@@ -31,12 +31,12 @@ target_fitness: None       # stop when best fitness reaches this value (None = n
 # Each restriction applies only when its *_restriction flag is True
 # (or, for the count-based ones, when the value is non-default).
 hydrophobic_restriction: False   # hydrophobic-moment bounds (disabled here)
-hydrophobic_min: 5.0             # ignored while hydrophobic_restriction is False
+hydrophobic_min: 0               # ignored while hydrophobic_restriction is False
 hydrophobic_max: None
 
-hindex_restriction: False         # enforce hydrophobic-index bounds
-hindex_min: -8                   # accept sequences with hydrophobic index >= -8
-hindex_max: None                 # no upper bound
+hindex_restriction: False        # enforce hydrophobic-index bounds
+hindex_min: 0                    # accept sequences with hydrophobic index >= -8
+hindex_max: 0                    # no upper bound
 
 charge_restriction: False        # net-charge bounds (disabled here)
 charge_min: 0                    # ignored while charge_restriction is False
@@ -47,7 +47,7 @@ positive_atleast: 0              # minimum positive residues required (0 = no re
 negative_atleast: 0              # minimum negative residues required (0 = no requirement)
 
 hdistribution_restriction: False  # enforce a minimum hydrophobicity-distribution score
-hdistribution_threshold: 0.9     # minimum accepted distribution score
+hdistribution_threshold: 0.9      # minimum accepted distribution score
 
 # --- aa pool ---
-mut_aa: ADEFKLNQRSTY
+mut_aa: ADEFKLNQRSTY  # only these aa are used
