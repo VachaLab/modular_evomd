@@ -56,6 +56,7 @@ class Instructor:
     evolver_name = Instruction(str, 'evolver')             # base name for the Evolver and its pkl file
     optimize = Instruction(str, 'maximize', choices={'maximize', 'minimize'})  # optimization direction
     hydrofobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # hydrophobicity scale used throughout
+    average_hm = Instruction(bool, False)  # Average hydrophobic moment and index as done by HeliQuest(R).
 
     # --- sequence lists ------------------------------------------------------
     sequences = Instruction(list, [], subtype=str)           # initial seed sequences (optional)
@@ -237,12 +238,22 @@ class Instructor:
 
         if self.hydrophobic_restriction:
             from restriction import HmomentRestriction
-            restriction_ = HmomentRestriction(min=self.hydrophobic_min, max=self.hydrophobic_max, h_scale=self.hydrofobic_scale)
+            restriction_ = HmomentRestriction(
+                min=self.hydrophobic_min, 
+                max=self.hydrophobic_max, 
+                h_scale=self.hydrofobic_scale,
+                average=self.average_hm,
+                )
             restrictions.append(restriction_)
         
         if self.hindex_restriction:
             from restriction import HindexRestriction
-            restriction_ = HindexRestriction(min=self.hindex_min, max=self.hindex_max, h_scale=self.hydrofobic_scale)
+            restriction_ = HindexRestriction(
+                min=self.hindex_min, 
+                max=self.hindex_max, 
+                h_scale=self.hydrofobic_scale,
+                average=self.average_hm,
+                )
             restrictions.append(restriction_)
         
         if self.charge_restriction:

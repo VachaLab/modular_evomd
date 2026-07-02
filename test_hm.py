@@ -60,16 +60,8 @@ def calculator_check(sequence) -> bool:
 
     This example fakes a job that needs one extra poll: the first call attaches
     a `check_times` marker to the sequence and returns False; the next call sees
-    the marker and returns True. The first try/except also guards against a
-    sequence that does not expose hydrophobic_index.
+    the marker and returns True. 
     """
-    try:
-        value = sequence.hydrophobic_index
-        print(f'Sequence is ready: {value}')
-    except:
-        # sequence object is not what we expected --> not ready
-        print('Where is the sequence?')
-        return False
     try:
         # second poll onward: the marker exists --> finished
         times = sequence.check_times

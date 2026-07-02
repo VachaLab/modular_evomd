@@ -116,7 +116,7 @@ def compute_hm_scalar(seq: Sequence, positions: np.ndarray, average: bool = Fals
        hm += res.hydrophobicity * pos[:2]
     if average:
         hm /= len(seq.residues)
-    hm = round(float(np.linalg.norm(hm)), 4)
+    hm = round(float(np.linalg.norm(hm)), 3)
     return hm 
 
 
@@ -136,7 +136,7 @@ def compute_hi(seq: Sequence, average: bool = False) -> float:
        hi += res.hydrophobicity
     if average:
         hi /= len(seq.residues)
-    hi = round(float(hi), 4)
+    hi = round(float(hi), 3)
     return hi
 
 

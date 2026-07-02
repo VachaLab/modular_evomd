@@ -403,6 +403,7 @@ class HindexRestriction(Restriction):
         min: Optional[float] = None,
         max: Optional[float] = None,
         h_scale: str = 'eisenberg',
+        average: bool = False,
     ) -> None:
         super().__init__()
 
@@ -425,6 +426,7 @@ class HindexRestriction(Restriction):
             )
 
         self.h_scale = h_scale
+        self.average = average
 
         # Import here to avoid circular dependency at module level.
         from scales import Scales
@@ -433,8 +435,8 @@ class HindexRestriction(Restriction):
     def test(self, seq: str, verbose=False) -> bool:
         """Return True if the computed hydrophobic index is within [min, max]."""
         from sequence_geometry import compute_hi
-        test_seq = Sequence(seq, h_scale=self.h_scale)
-        hindex = compute_hi(test_seq)
+        test_seq = Sequence(seq, h_scale=self.h_scale,)
+        hindex = compute_hi(test_seq, average=self.average)
         above_min = self._min is None or hindex >= self._min
         below_max = self._max is None or hindex <= self._max
 
@@ -476,7 +478,8 @@ class HmomentRestriction(Restriction):
         self,
         min: Optional[float] = None,
         max: Optional[float] = None,
-        h_scale: str = 'eisenberg'
+        h_scale: str = 'eisenberg',
+        average: bool = False,
     ) -> None:
         super().__init__()
 
@@ -499,6 +502,7 @@ class HmomentRestriction(Restriction):
             )
 
         self.h_scale = h_scale
+        self.average = average
 
         # Import here to avoid circular dependency at module level.
         from scales import Scales
@@ -510,7 +514,7 @@ class HmomentRestriction(Restriction):
         seq = self._as_sequence(seq, h_scale=self.h_scale)
         
         positions = compute_helix_positions(seq, translate=False)
-        hm_scalar = compute_hm_scalar(seq, positions)
+        hm_scalar = compute_hm_scalar(seq, positions, average=self.average)
 
         above_min = self._min is None or hm_scalar >= self._min
         below_max = self._max is None or hm_scalar <= self._max

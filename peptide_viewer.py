@@ -234,15 +234,26 @@ def set_title(
     args: argparse.Namespace,
     seq: Sequence,
     hm_scalar: float,
+    hi_value: float,
     ax,
 ) -> None:
     """Builds and sets the plot title based on active display options."""
     title = r'$\alpha$-Helix'
     extras = []
     if args.print_hm:
-        extras.append(f'Hm: {round(hm_scalar, 3)}')
+        if args.av_hm:
+            pretit = r'<$\mu$H>'
+        else:
+            pretit = r'$\mu$H'
+        extras.append(f'{pretit}: {round(hm_scalar, 3)}')
     if args.print_hi:
-        extras.append(f'Hi: {seq.hydrophobic_index}')
+        if args.av_hm:
+            pretit = '<Hi>'
+        else:
+            pretit = 'Hi'
+        extras.append(f'{pretit}: {hi_value}')
+    if args.print_charge:
+        extras.append(f'Ch: {seq.charge}')
     if extras:
         title += '\n'
         title += '  ' + '  '.join(extras)
@@ -305,18 +316,19 @@ def _run_pipeline(args: argparse.Namespace) -> None:
     Executes the full visualization pipeline given a populated Namespace.
     Shared by both main() and plot_sequence().
     """
-    seq = Sequence(args.sequence, h_scale='eisenberg') if isinstance(args.sequence, str) else args.sequence
+    seq = Sequence(args.sequence, h_scale=args.h_scale) if isinstance(args.sequence, str) else args.sequence
     cmap = plt.get_cmap(args.cmap)
 
     # Compute geometry before alignment to preserve the HM scalar magnitude
     positions = compute_helix_positions(seq)
     hm_vector = compute_hm_vector(seq, positions)
-    hm_scalar = compute_hm_scalar(seq, positions)
+    hm_scalar = compute_hm_scalar(seq, positions, average=args.av_hm)
+    hi_value = compute_hi(seq, average=args.av_hm)
     positions = align_to_minus_y(positions, hm_vector)
 
     colors = set_colors(args, seq, positions, cmap)
     fig, ax = create_figure(args, positions)
-    set_title(args, seq, hm_scalar, ax)
+    set_title(args, seq, hm_scalar, hi_value, ax)
     fig, ax = plot_peptide(args, seq, positions, colors, fig, ax)
 
     if args.show_slices:
@@ -339,8 +351,11 @@ def plot_sequence(
     sequence: "str | Sequence",
     parameter: str = 'hydrophobicity',
     letters: bool = True,
+    h_scale: str = 'eisenberg',
+    av_hm: bool = False,
     print_hm: bool = False,
     print_hi: bool = False,
+    print_charge: bool = False,
     two_d: bool = True,
     three_d: bool = False,
     show_slices: bool = False,
@@ -363,8 +378,11 @@ def plot_sequence(
     sequence         : Peptide sequence as string or Sequence object.
     parameter        : Coloring scheme: 'hydrophobicity', 'charge', or 'faces'.
     letters          : Show residue letters and indices on the plot.
+    h_scale          : Define hydrophobicity scale.
+    av_hm            : Average htdrophobic moment <mH> as done by HeliQuest(R)
     print_hm         : Show hydrophobic moment value in the title.
     print_hi         : Show hydrophobic index value in the title.
+    print_charge     : Show net charge in the title.
     two_d            : 2D helical wheel projection (default).
     three_d          : 3D helix plot. Overrides two_d if True.
     show_slices      : Draw slice lines/planes. Mutually exclusive with show_sections.
@@ -380,8 +398,11 @@ def plot_sequence(
         sequence=sequence,
         parameter=parameter,
         letters=letters,
+        h_scale=h_scale,
+        av_hm=av_hm,
         print_hm=print_hm,
         print_hi=print_hi,
+        print_charge=print_charge,
         two_d=not three_d,
         three_d=three_d,
         show_slices=show_slices,
@@ -422,6 +443,16 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
     )
     parser.add_argument(
+        '-hsc', '--h-scale',
+        help='Hydrophobicity scale to be used. Default: eisenberg.',
+        default='eisenberg',
+    )
+    parser.add_argument(
+        '-avh', '--av-hm',
+        help='Average hydrophobic moment as done by HeliQuest(R). Default: False.',
+        action='store_true',
+    )
+    parser.add_argument(
         '-phm', '--print-hm',
         help='Show hydrophobic moment value in the title.',
         action='store_true',
@@ -429,6 +460,11 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         '-phi', '--print-hi',
         help='Show hydrophobic index value in the title.',
+        action='store_true',
+    )
+    parser.add_argument(
+        '-pch', '--print-charge',
+        help='Show peptide net charge in the title.',
         action='store_true',
     )
     parser.add_argument(

@@ -12,10 +12,14 @@ parents_ratio: 0.25        # top 25% of the ranking kept as parents each generat
 # --- external methods ---
 # Names of the Python module(s) (without .py) providing the iteration functions.
 # Here a single module (test_hm.py) supplies all three roles.
-constructor: test_hm
+# constructor: test_hm
 calculator:  test_hm
-calculator_check:  test_hm
-analyzer:    test_hm
+# calculator_check:  test_hm
+# analyzer:    test_hm
+
+# --- scales ---
+hydrofobic_scale: eisenberg  # other options: kyte-doolittle, wimley-white, fauchere-pliska
+average_hm: True  # set to True to compute the average of hm and hi
 
 # --- iteration / timing ---
 sleep_time: 0              # seconds to wait between simulation-status checks (0 = no wait)
@@ -26,7 +30,7 @@ target_fitness: None       # stop when best fitness reaches this value (None = n
 # --- restrictions ---
 # Each restriction applies only when its *_restriction flag is True
 # (or, for the count-based ones, when the value is non-default).
-hydrophobic_restriction: True   # hydrophobic-moment bounds (disabled here)
+hydrophobic_restriction: False   # hydrophobic-moment bounds (disabled here)
 hydrophobic_min: 5.0             # ignored while hydrophobic_restriction is False
 hydrophobic_max: None
 

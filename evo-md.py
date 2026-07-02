@@ -179,6 +179,11 @@ def main():
         # a CSV report via --read-report), show it, and exit without running
         # the evolution loop.
         evo = get_evolver(args)
+        # activate console output if requested
+        if args.verbose:
+            evo.verbose = True
+        else:
+            evo.verbose = False
         # propagate the fast-cycle flag to the Evolver
         evo.fast_cycle = args.fast_cycle
         if args.read_report:
@@ -224,8 +229,10 @@ def main():
 
         # propagate the fast-cycle flag to the Evolver
         evo.fast_cycle = args.fast_cycle
-        # reduce console output if requested
-        if args.noverbose:
+        # activate console output if requested
+        if args.verbose:
+            evo.verbose = True
+        else:
             evo.verbose = False
 
         # initial population for the first generation

@@ -84,9 +84,6 @@ class Sequence:
         ]
 
         # Physicochemical summary properties (derived once from the residues)
-        self.hydrophobic_index: float = round(
-            sum(r.hydrophobicity for r in self.residues), 3
-        )
         self.charge: float = sum(r.charge for r in self.residues)
         self.n_ter_charge: float = self.residues[0].charge   # charge of the N-terminal residue
         self.c_ter_charge: float = self.residues[-1].charge  # charge of the C-terminal residue

@@ -51,7 +51,7 @@ class Evolver:
 
     def __init__(
         self, instructor, recover=False,
-        fast_cycle=False, verbose=True,
+        fast_cycle=False, verbose=False,
         ) -> None:
         """
         Build an Evolver from an Instructor and initialize its working lists.
@@ -84,7 +84,7 @@ class Evolver:
         self.runnable = True  # used to stop optimization iteratively
         self.recover_enabled = recover
         self.fast_cycle = fast_cycle # if true, save_pkl() is avoided during iterations
-        self.verbose = verbose
+        self.verbose = verbose  # activate Evolver console output 
     
     # special methods ----------------------------------------
     def __len__(self):
@@ -97,8 +97,10 @@ class Evolver:
         total_sequences = len(self.sequences) + len(self.discarded_sequences) + len(self.parent_sequences)
         lines = ['===== EVOLVER CURRENT STATE =====\n']
 
+        # Show optimization type
         lines.append(f"{'Optimization':<24}: {str(self.instructor.optimize)}\n")
         
+        # Show Evolver configuration
         is_weighted = ''
         if self.instructor.populate_weighted:
             is_weighted = 'weighted-'
@@ -113,8 +115,17 @@ class Evolver:
         lines.append(f"{'Parent sequences':<24}: {len(self.parent_sequences)}\n")
         lines.append(f"{'Discarded sequences':<24}: {len(self.discarded_sequences)}\n")
         lines.append(f"{'Total sequences':<24}: {total_sequences}\n")
-        lines.append(f"\n{f'Top {self.instructor.top_list}':<24}  {'Sequence':<{pep_len}} {'Gen':<5} {'Fitness':<8} {'Hm':<8} {'Charge':<8}\n")
+
+        # set columns: Top X Sequence  Gen  Fitness  Hm  Charge
+        # Hm or <Hm>?
+        if self.instructor.average_hm:
+            hm_col = '<Hm>'
+        else:
+            hm_col = 'Hm'
+        lines.append(f"\n{f'Top {self.instructor.top_list}':<24}  {'Sequence':<{pep_len}} {'Gen':<5} {'Fitness':<8} {hm_col:<8} {'Charge':<8}\n")
+        
         all_sequences = self.parent_sequences + self.discarded_sequences + self.sequences
+        
         i = 0
         while i < self.instructor.top_list:
             if len(all_sequences) < i+1:

@@ -5,7 +5,7 @@ Exceptions for evoMD implementation.
 
 class MethodFailedError(Exception):
     """
-    Exception used when an exteral method fails.
+    Exception raised when an exteral method fails.
 
     Class attributes:
         cose (int): Code to classify exception.
@@ -17,7 +17,7 @@ class MethodFailedError(Exception):
         
 class MethodExistError(Exception):
     """
-    Exception used if an external method is not found.
+    Exception raised if an external method is not found.
     """
     def __init__(self, message):
         # pass message to superclass
@@ -25,7 +25,7 @@ class MethodExistError(Exception):
     
 class EmptyPopulationError(Exception):
     """
-    Exception used if Evolver.sequences is empty when sequences are expected.
+    Exception raised if Evolver.sequences is empty when sequences are expected.
     """
     def __init__(self, message):
         # pass message to superclass
@@ -33,7 +33,15 @@ class EmptyPopulationError(Exception):
     
 class SequenceNotFoundError(Exception):
     """
-    Exception used when a sequence cannot be found in a list.
+    Exception raised when a sequence cannot be found in a list.
+    """
+    def __init__(self, message):
+        # pass message to superclass
+        super().__init__(message)
+
+class EvolverStateError(Exception):
+    """
+    Exception raised when Evolver cannot continue.
     """
     def __init__(self, message):
         # pass message to superclass

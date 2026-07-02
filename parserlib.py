@@ -234,11 +234,11 @@ def get_arguments() -> argparse.Namespace:
              'intermediate saves). Faster but less crash-resistant.'
     )
 
-    # Reduce Evolver console output during the run.
+    # Activate Evolver console output during the run.
     parser.add_argument(
-        '-nvb', '--noverbose',
+        '-vb', '--verbose',
         action='store_true',
-        help='Reduce Evolver console output.'
+        help='Activate Evolver console output.'
     )
 
     args = parser.parse_args()
