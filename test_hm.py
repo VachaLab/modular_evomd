@@ -1,12 +1,11 @@
 # === test_hm.py ===
 """
 Example external-methods module for Evo-MD.
-This example can me used with input.yaml input file
+This example can be used with `input.yaml` input file
 in test directory. It performs the maximization of hydrophobic moment.
 
-This is a minimal, self-contained example of the user-supplied module that
-Evo-MD calls each iteration. It is NOT part of the core project; it exists to
-show how to wire your own simulation/fitness code into the framework.
+This is a minimal example of the user-supplied modules that
+Evo-MD calls each iteration. It is NOT part of the core project.
 
 A module like this provides the four functions the Manager looks up by name:
     constructor_method(sequence) -> None
@@ -16,14 +15,19 @@ A module like this provides the four functions the Manager looks up by name:
 
 You point the Instructor at this module through the YAML keys `constructor`,
 `calculator`, `calculator_check` and `analyzer` (here all four are 'test_hm'). 
-The same module may provide all four functions, as it does below.
+    constructor: test_hm
+    calculator:  test_hm
+    calculator_check:  test_hm
+    analyzer:    test_hm
 
-Each function receives the Sequence object as the keyword argument `sequence`
-and runs inside that sequence's iteration directory. In this example the
+The four functions can be defined in the same module and called as
+`calculator` key.
+
+Each function receives the Sequence object as an argument `sequence`
+and runs in sequence's iteration directory (iter_?). In this example the
 "simulation" is faked: there is nothing to build or submit, the check pretends
 the job needs one extra cycle, and the fitness is simply the peptide's
-hydrophobic moment. Replace the bodies with real calls (build inputs, submit
-jobs, parse results) to use Evo-MD for an actual problem.
+hydrophobic moment. 
 """
 
 import logging
