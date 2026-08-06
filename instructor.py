@@ -55,7 +55,7 @@ class Instructor:
     evomd_directory = Instruction(str, 'simulation_data')  # working dir for simulation data
     evolver_name = Instruction(str, 'evolver')             # base name for the Evolver and its pkl file
     optimize = Instruction(str, 'maximize', choices={'maximize', 'minimize'})  # optimization direction
-    hydrofobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # hydrophobicity scale used throughout
+    hydrofobic_scale = Instruction(str, 'eisenberg', choices={'eisenberg', 'eisenberg-norm', 'kyte-doolittle', 'wimley-white', 'fauchere-pliska'})  # hydrophobicity scale used throughout
     average_hm = Instruction(bool, False)  # Average hydrophobic moment and index as done by HeliQuest(R).
 
     # --- sequence lists ------------------------------------------------------
