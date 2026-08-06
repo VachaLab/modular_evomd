@@ -85,13 +85,13 @@ You can use `peptide_viewer.py` to plot any sequence as $\alpha$-helix. You can 
 The example shows Opi1 peptide (`QKLSRAIAKGKDNLKEYKLNMS`).
 
 ```bash
-python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --show-letters
+python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS
 ```
 
 Do you want to see information as shown by [HeliQuest](https://heliquest.ipmc.cnrs.fr)? --> Change hydrophobicity scale and include the information that you need.
 
 ```bash
-python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --show-letters --print-hm --print-hi --print-ch --av-hm --h-scale fauchere-pliska
+python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --print-hm --print-hi --print-ch --av-hm --h-scale fauchere-pliska
 ```
 
 ![Opi1 helix view](images/opi1_example.png)
@@ -223,8 +223,7 @@ python scripts_new/evo-md.py --start
 ## Running on LUMI
 
 You can run evo-md using a LUMI container wrapper.
-The next instructions were adapted from LUMI Documentation.
-https://docs.lumi-supercomputer.eu/software/installing/container-wrapper/
+The next instructions were adapted from [LUMI Documentation](https://docs.lumi-supercomputer.eu/software/installing/container-wrapper/)
 
 Load the LUMI container module.
 

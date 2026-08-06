@@ -120,13 +120,13 @@ def plot_peptide(
         if args.two_d:
             overlap = [np.linalg.norm(np.array([x, y]) - v) < 0.05 for v in visited_xy]
             if visited_xy and any(overlap):
-                df = 1.3
-            ax.scatter(x * df, y * df, c=[colors[res.index]], s=370, alpha=1, zorder=3)
+                df = 1.34
+            ax.scatter(x * df, y * df, c=[colors[res.index]], s=500, alpha=1, zorder=3)
             visited_xy.append(np.array([x, y]))
         else:
             ax.scatter(x, y, z, c=[colors[res.index]], s=100, alpha=0.8)
 
-        if args.letters:
+        if not args.noletters:
             # Brightness of background color
             # Simple brightness calculation
             brightness = 0.299 * colors[res.index][0] + 0.587 * colors[res.index][1] + 0.114 * colors[res.index][2]
@@ -354,7 +354,7 @@ def _run_pipeline(args: argparse.Namespace) -> dict:
 def plot_sequence(
     sequence: "str | Sequence",
     parameter: str = 'hydrophobicity',
-    letters: bool = True,
+    noletters: bool = False,
     h_scale: str = 'eisenberg',
     av_hm: bool = False,
     print_hm: bool = False,
@@ -381,7 +381,7 @@ def plot_sequence(
     ----------
     sequence         : Peptide sequence as string or Sequence object.
     parameter        : Coloring scheme: 'hydrophobicity', 'charge', or 'faces'.
-    letters          : Show residue letters and indices on the plot.
+    noletters        : No show residue letters and indices on the plot.
     h_scale          : Define hydrophobicity scale.
     av_hm            : Average htdrophobic moment <mH> as done by HeliQuest(R)
     print_hm         : Show hydrophobic moment value in the title.
@@ -401,7 +401,7 @@ def plot_sequence(
     args = argparse.Namespace(
         sequence=sequence,
         parameter=parameter,
-        letters=letters,
+        noletters=noletters,
         h_scale=h_scale,
         av_hm=av_hm,
         print_hm=print_hm,
@@ -442,8 +442,8 @@ def get_arguments() -> argparse.Namespace:
         choices=['hydrophobicity', 'charge', 'faces'],
     )
     parser.add_argument(
-        '-l', '--letters',
-        help='Show residue letters and indices on the plot.',
+        '-nl', '--noletters',
+        help='Show residue noletters and indices on the plot.',
         action='store_true',
     )
     parser.add_argument(
