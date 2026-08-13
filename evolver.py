@@ -647,7 +647,7 @@ class Evolver:
         logger.info(f'Evolver: {len(self.parent_sequences)} in parent sequences list')
         logger.info(f'Evolver: {len(self.discarded_sequences)} in discarded sequences list')
     
-    def read_report(self, report_path):
+    def read_report(self, report_path: str):
         """
         Initialize the evolver from a CSV report with the format produced by
         report_sequences(): 'sequence,generation,fitness'.
