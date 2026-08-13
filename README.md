@@ -112,7 +112,9 @@ python sequence_logo.py --ratio 0.25 --gradient --group max --evopkl evolver.pkl
 See the available options
 
 ```bash
-python peptide_viewer.py --help
+python evo-md.py --help   # evolution
+python peptide_viewer.py --help  # helix view
+python sequence_logo.py --help  # sequence logo
 ```
 
 ---
