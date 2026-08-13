@@ -6,6 +6,7 @@ from an evomd csv report.
 
 from collections import Counter
 import argparse
+import os
 import matplotlib.pyplot as plt
 from matplotlib.textpath import TextPath
 from matplotlib.textpath import TextPath
@@ -87,7 +88,8 @@ def plot_sequence_logo(
 
     # check font
     if font is None:
-        funente_path = "fonts/SilkRemington-SBold.ttf"
+        _SCRIPTDIR = os.path.dirname(os.path.abspath(__file__))
+        funente_path = os.path.join(_SCRIPTDIR, "fonts", "SilkRemington-SBold.ttf")
     else:
         funente_path = font
     
@@ -317,7 +319,7 @@ def main():
         amount = int(len(sequences)*args.ratio)
         sequences = sequences[:amount]
 
-    plot_sequence_logo(sequences=sequences, gradient=args.gradient)
+    plot_sequence_logo(sequences=sequences, gradient=args.gradient, save=args.save, out=args.out)
 
 if __name__ == '__main__':
     main()

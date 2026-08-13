@@ -96,6 +96,19 @@ python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --print-hm --print-hi
 
 ![Opi1 helix view](images/opi1_example.png)
 
+**6. Plot sequence logo:**
+
+You can use `sequence_logo.py` to see the behavior of the primary sequences as a sequence logo. 
+`sequence_logo.py` can read evolver.pkl or the CSV report created by `python evo-md.py --report-sequences`.
+
+```bash
+# plot the 25% of the sequences with highest hydrophobic moment
+python sequence_logo.py --ratio 0.25 --gradient --group max --evopkl evolver.pkl
+```
+
+![Sequence logo](images/sequence_logo.png)
+
+
 See the available options
 
 ```bash
