@@ -1,4 +1,4 @@
-# Modular EvoMD implementation in python
+# Modular EvoMD implementation in python - Library
 
 EvoMD is an evolutionary optimization framework for peptide sequences. It evolves a population of peptides based on a user-defined fitness function evaluated via simulation modules written and plugged in by user. The configuration is stored in a single YAML file, and the state is serialized to evolver.pkl after every step.
 
