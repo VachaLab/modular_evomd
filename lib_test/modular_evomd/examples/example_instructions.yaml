@@ -1,0 +1,14 @@
+# Minimal example instructions for evo-md / evomd.create_evolver().
+#
+# 'calculator' must name a Python module (importable from your working
+# directory or PYTHONPATH) that provides constructor_method, calculator_method,
+# calculator_check, and analyzer_method -- see the README's "External
+# simulation methods" section.
+
+population: 32
+peptide_len: 22
+populate_method: swap
+parents_ratio: 0.3
+max_generations: 50
+
+calculator: my_calculator_module
