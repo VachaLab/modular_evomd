@@ -34,3 +34,8 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+# Non-Python files that must ship inside the installed package. Without this,
+# 'pip install' silently drops them even though they exist in the repo.
+[tool.setuptools.package-data]
+evomd = ["viz/fonts/*.ttf"]

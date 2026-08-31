@@ -1,299 +1,109 @@
-# Modular EvoMD implementation in python - Library
+# evomd
 
-EvoMD is an evolutionary optimization framework for peptide sequences. It evolves a population of peptides based on a user-defined fitness function evaluated via simulation modules written and plugged in by user. The configuration is stored in a single YAML file, and the state is serialized to evolver.pkl after every step.
+A molecular-simulation-driven evolutionary engine for peptide (amino acid)
+sequence optimization. Usable both as a set of command-line tools and as an
+importable Python library.
 
-The general process begins with a random population that is continuously evaluated and sorted. The worst performers are discarded, and the population is renewed through crossover of the best sequences. The result is an optimized population of sequences. 
-
-![EvoMD process](images/evomd_process.png)
-
-
----
-
-## Dependencies
-
-Python 3.10+ required.
+## Installation
 
 ```bash
-pip install numpy pyyaml matplotlib
+pip install git+https://github.com/VachaLab/modular_evomd.git
 ```
 
----
+This installs the `evomd` library and three console commands: `evo-md`,
+`peptide-viewer`, and `sequence-logo`.
 
-## Quickstart
-
-This example uses `test_hm.py` (included), which maximizes the hydrophobic moment of 20-residue peptides with no real simulation.
-
-**1. Create an `input.yaml` (or use file in test directory):**
-
-```yaml
-optimize: maximize  # maximize or minimize
-population: 32  # how many sequences in the population?
-peptide_len: 20  # peptide lenght
-populate_method: swap  # hybrids and swap work better
-extra_mutation: True  # Random point mutation
-also_mutate_probability: 0.1  # 10% of the new sequences are mutated
-parents_ratio: 0.25  # Parents are chosen from the 25% of the population
-
-# User must write the name of the python script with the external methods.
-# These are external methods. You can include all the methods in one file
-# and define only calculator (see example in test/input.yaml).
-constructor: test_hm  # script for contructing simulation box.
-calculator:  test_hm  # running.
-calculator_check: test_hm  # checking simulations.
-analyzer:    test_hm  # Analysis and computation of fitness values.
-
-sleep_time: 0
-max_check_cycle: 50
-max_generations: 30
-
-hydrophobic_restriction: False  # restraints in hydrophobic moment
-hydrophobic_min: null   # ignored while hydrophobic_restriction is False
-hydrophobic_max: null   # no max limit
-
-mut_aa: ADEFKLNQRSTY    # only these aa are used
-```
-
-**2. Create the Evolver:**
+## Command-line usage
 
 ```bash
-python evo-md.py --file input.yaml --create-evolver
+# Create a new session from a YAML instruction file and inspect it
+evo-md -f instructions.yaml --create-evolver
+evo-md --show-evolver
+
+# Run the evolution loop
+evo-md --start
+
+# If it gets interrupted (Ctrl+C, crash, etc.), resume it
+evo-md --restart
+
+# Intentionally stop a session so a later --start/--restart doesn't touch it
+# by accident (useful when juggling several evolutions/pkl files at once)
+evo-md --stop-evolver
+
+# Visualization tools
+peptide-viewer --sequence KLAKLAKKLAKLAK
+sequence-logo --report sequences_report.csv
 ```
 
-**3. Run the evolution:**
+Run `evo-md --help`, `peptide-viewer --help`, or `sequence-logo --help` for
+the full list of options.
 
-```bash
-python evo-md.py --start
-```
-
-**4. Inspect the results:**
-
-```bash
-python evo-md.py --show-evolver                # prints the final state of the process
-python evo-md.py --report-sequences            # writes sequences_report.csv
-python evo-md.py --plot-evolution --show-kids  # plots and saves as evolution.png
-```
-
-The plot shows the evolution of the population (black solid line). Green solid line is the average fitness of the kids
-created in each generation. Highest and lowest fitness found in each generation are also presented.
-
-![Evolution process example](images/evolution_example.png)
-
-**5. Plot sequences:**
-
-You can use `peptide_viewer.py` to plot any sequence as $\alpha$-helix. You can show hydrophobic moment computed as described by [Eisenberg](https://doi.org/10.1073/pnas.81.1.140).
-
-The example shows Opi1 peptide (`QKLSRAIAKGKDNLKEYKLNMS`).
-
-```bash
-python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS
-```
-
-Do you want to see information as shown by [HeliQuest](https://heliquest.ipmc.cnrs.fr)? --> Change hydrophobicity scale and include the information that you need.
-
-```bash
-python peptide_viewer.py --sequence QKLSRAIAKGKDNLKEYKLNMS --print-hm --print-hi --print-ch --av-hm --h-scale fauchere-pliska
-```
-
-![Opi1 helix view](images/opi1_example.png)
-
-**6. Plot sequence logo:**
-
-You can use `sequence_logo.py` to see the behavior of the primary sequences as a sequence logo. 
-`sequence_logo.py` can read evolver.pkl or the CSV report created by `python evo-md.py --report-sequences`.
-
-```bash
-# plot the 25% of the sequences with highest hydrophobic moment
-python sequence_logo.py --ratio 0.25 --gradient --group max --evopkl evolver.pkl
-```
-
-![Sequence logo](images/sequence_logo.png)
-
-
-See the available options
-
-```bash
-python evo-md.py --help   # evolution
-python peptide_viewer.py --help  # helix view
-python sequence_logo.py --help  # sequence logo
-```
-
----
-
-## How it works
-
-Each generation EvoMD:
-
-1. **Constructs** the simulation box (constructor_method).
-2. **Runs** the simulation (calculator_method).
-3. **Checks** if simulations finished (calculator_check).
-4. **Analyzes** results and computes fitness (analyzer_method).
-5. **Sorts** sequences, keeps the best as parents, and generates the next generation.
-
-Users have the control of steps 1–4 by writing a Python plug-in with four functions and calling it in the YAML (see next section). EvoMD handles the rest.
-
-The general idea of the modular architecture is shown in the next figure:
-
-![EvoMD architecture](images/evomd_architecture.png)
-
----
-
-## Writing your own methods
-
-Users must create Python modules with these four functions and name it in the YAML (`constructor`, `calculator`, `analyzer`). All three keys can point to the same file.
+## Library usage
 
 ```python
-def constructor_method(sequence) -> None:
-    # Write input files, build the system, etc.
-    pass
+import evomd
 
-def calculator_method(sequence) -> None:
-    # Launch the job (submit, start a process, etc.)
-    pass
+instructions = """
+population: 32
+peptide_len: 22
+populate_method: swap
+max_generations: 50
+calculator: my_calculator_module
+"""
 
-def calculator_check(sequence) -> bool:
-    # Return True when the job is done, False otherwise.
-    # Polled repeatedly by EvoMD until True or the cycle budget runs out.
-    return True
-
-def analyzer_method(sequence) -> float:
-    # Parse results and return the fitness value.
-    return 0.0
+evo = evomd.create_evolver(instructions)  # a YAML file path also works here
+evo.show_evolver()
+evo.start(fast_cycle=True)
+evo.plot_evolution()
 ```
 
-Each function runs inside the sequence's iteration directory. The `sequence` object gives the residue string (`str(sequence)`), physicochemical properties (`sequence.charge`, `sequence.residues`, …), and state flags (`sequence.is_failed` to mark a failure). You can attach arbitrary attributes to carry information between functions (e.g. a job ID set in `calculator_method` and read in `calculator_check`).
+`create_evolver()` accepts either a path to a YAML file or the YAML content
+itself as a string, so the same call works from a script or pasted directly
+in a notebook cell.
 
-See `test_hm.py` for a short example.
+If a run gets interrupted mid-session (e.g. `KeyboardInterrupt` in a
+notebook), resume it on the same `evo` object with:
 
----
-
-## Common commands
-
-| What you want to do | Command |
-|---|---|
-| Create a new Evolver and exit | `python evo-md.py --file input.yaml --create-evolver` |
-| Start the evolution loop | `python evo-md.py --start` |
-| Resume an interrupted iteration | `python evo-md.py --restart` |
-| Show the current state | `python evo-md.py --show-evolver` |
-| Export all sequences to CSV | `python evo-md.py --report-sequences` |
-| Plot fitness over generations | `python evo-md.py --plot-evolution` |
-| Roll back to the last complete generation | `python evo-md.py --last-generation` |
-
-Run `python evo-md.py --help` for the full flag reference.
-
----
-
-## Output files
-
-| File | Description |
-|---|---|
-| `evolver.pkl` | Full Evolver state, updated after each step. |
-| `sequences_report.csv` | All sequences with generation and fitness. |
-| `evolution.png` | Fitness plot (written by `--plot-evolution`). |
-| `simulation_data/<SEQUENCE>/iter_N/` | Per-sequence, per-attempt directories where your methods run. |
-
----
-
-## Recovery
-
-If a run is interrupted:
-
-```bash
-python evo-md.py --restart
+```python
+evo.restart()
 ```
 
-If the last generation is incomplete or just want to go back to the last completed generation:
+and stop it intentionally (equivalent to `evo-md --stop-evolver`) with:
 
-```bash
-python evo-md.py --last-generation
+```python
+evo.stop_evolver()
 ```
 
-Then continue with `--start`.
+### Other library entry points
 
----
-
-## Update version
-
-Use the old version to create a sequence report in CSV format.
-
-```bash
-python scripts_old/evo-md.py --report-sequences
+```python
+from evomd import Sequence, Residue, Scales, Instructor, Evolver, Manager, Generator
+from evomd.viz.peptide_viewer import plot_sequence
+from evomd.viz.sequence_logo import plot_sequence_logo
 ```
 
-Update input.yaml with new variable names (some variables were refactores for better comprehention).
+## External simulation methods
 
-Create evolver.pkl and read report with the new version.
+`evomd` does not define the fitness function or the simulation itself: it
+calls into a user-supplied Python module (named via the `constructor`,
+`calculator`, `calculator_check`, and `analyzer` options in the YAML
+instructions), each exposing a fixed set of functions:
 
-```bash
-python scripts_new/evo-md.py --create-evolver --file input.yaml --read-report sequence_report.csv
+```python
+def constructor_method(sequence): ...   # prepares the simulation input
+def calculator_method(sequence): ...    # launches the simulation
+def calculator_check(sequence): ...     # returns True once it has finished
+def analyzer_method(sequence): ...      # returns the fitness value
 ```
 
-Start evolution with the new version
+See `examples/example_instructions.yaml` for a minimal configuration.
 
-```bash
-python scripts_new/evo-md.py --start
-```
-
----
-
-## Running on LUMI
-
-You can run evo-md using a LUMI container wrapper.
-The next instructions were adapted from [LUMI Documentation](https://docs.lumi-supercomputer.eu/software/installing/container-wrapper/)
-
-Load the LUMI container module.
-
-```bash
-module load LUMI
-module load lumi-container-wrapper
-```
-
-Create a conda environment file (e.g. env.yml).
+## Repository layout
 
 ```
-# --- env.yml ---
-channels:
-  - conda-forge
-
-dependencies:
-  # Dependencies for evo-md
-  - python>=3.10
-  - numpy
-  - pyyaml
-  - matplotlib
-
-  # Include dependencies for your
-  # external methods (constructor, calculator, analyzer)
-  # e.g. scipy, pymol, vermouth, biopython, etc.
-  - pymol-open-source
-  - vermouth
-```
-
-Create the directory for the container (e.g. env/) and create the container.
-
-```bash
-mkdir env
-conda-containerize new --prefix env env.yml
-```
-
-Execute python from the container.
-
-```bash
-/users/USER/env/bin/python /users/USER/modular_evomd/evo-md.py --help
-```
-
-## Populating from backup
-
-You can populate Evolver from the json files created after each generation.
-First step is to create a **new evolver** using an input file with an adequate configuration (be sure that peptide_len is equal to the length of the sequences in the backup).
-
-Then populate from backup:
-
-```bash
-python evo-md.py --from-backup
-```
-
-This creates sequences from json files in simulation directory and sort the sequences. The result is an evolver with choosen parents ready to start.
-
-```bash
-python evo-md.py --start
+src/evomd/
+├── core/     configuration, the evolutionary engine, and the sequence data model
+├── methods/  sequence-generation strategies (swap, hybrid, pattern, flanks, ...)
+├── viz/      peptide viewer, sequence logo, radial sequence plots
+└── cli/      the evo-md command-line entry point
 ```
