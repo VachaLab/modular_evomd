@@ -1,3 +1,16 @@
+Metadata-Version: 2.4
+Name: evomd
+Version: 0.1.0
+Summary: A molecular-simulation-driven evolutionary engine for peptide sequence optimization.
+Author: VachaLab
+License: MIT
+Project-URL: Repository, https://github.com/VachaLab/modular_evomd
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: pyyaml
+Requires-Dist: matplotlib
+
 # evomd
 
 A molecular-simulation-driven evolutionary engine for peptide (amino acid)
@@ -72,22 +85,6 @@ and stop it intentionally (equivalent to `evo-md --stop-evolver`) with:
 
 ```python
 evo.stop_evolver()
-```
-
-### Creating an Evolver from a CSV report
-
-Equivalent to `evo-md --create-evolver --read-report NAME.csv`:
-
-```python
-evo = evomd.create_evolver_from_report(instructions, "sequences_report.csv")
-```
-
-### Loading an existing evolver.pkl
-
-```python
-evo = evomd.load_evolver("evolver.pkl")  # path defaults to "evolver.pkl"
-evo.show_evolver()
-evo.restart()  # continue it, if it wasn't finished
 ```
 
 ### Other library entry points

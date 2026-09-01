@@ -1,0 +1,4 @@
+[console_scripts]
+evo-md = evomd.cli.evo_md:main
+peptide-viewer = evomd.viz.peptide_viewer:main
+sequence-logo = evomd.viz.sequence_logo:main
