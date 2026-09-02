@@ -45,7 +45,7 @@ class Sequence:
     simulation state. Geometry is handled externally by GenMethod subclasses.
     """
 
-    def __init__(self, seq: str, generation: int = 0, h_scale: str = 'eisenberg') -> None:
+    def __init__(self, seq: str, generation: int = 0, h_scale: str = 'eisenberg', av_hm: bool = False) -> None:
         """
         Build and validate a Sequence.
 
@@ -57,6 +57,7 @@ class Sequence:
             seq (str): Peptide residue string (case-insensitive; stored upper-cased).
             generation (int): Generation in which the sequence was created.
             h_scale (str): Hydrophobicity scale used for the residues.
+            av_hm (bool): average hm and hi values are computed.
 
         Raises:
             ResidueError: If the string is empty or contains unknown residues.
@@ -76,6 +77,7 @@ class Sequence:
         self.sequence: str = seq.upper()
         self.generation: int = generation
         self.hydrophobic_scale: str = h_scale
+        self.av_hm: bool = av_hm
 
         # Residue objects (one per letter, carrying position and properties)
         self.residues: List[Residue] = [
