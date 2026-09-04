@@ -7,7 +7,7 @@ importable Python library.
 ## Installation
 
 ```bash
-pip install git+https://github.com/VachaLab/modular_evomd.git
+pip install git+https://github.com/VachaLab/modular_evomd.git@evolib
 ```
 
 This installs the `evomd` library and three console commands: `evo-md`,
