@@ -102,6 +102,7 @@ def main():
     its action and exits, so only one action runs per invocation. See the
     module docstring for the overall workflow.
     """
+    setup_logging()
     logger = logging.getLogger(__name__)
     args = get_arguments()
 
@@ -273,5 +274,4 @@ def main():
 
 
 if __name__ == '__main__':
-    setup_logging()
     main()
