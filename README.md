@@ -1,8 +1,10 @@
-# Modular EvoMD
+# Modular EvoMD - for developement
 
 A molecular-simulation-driven evolutionary engine for peptide
 sequence optimization. Usable both as a set of command-line tools and as an
 importable Python library.
+
+**Not release**
 
 ---
 
