@@ -4,12 +4,14 @@ A molecular-simulation-driven evolutionary engine for peptide
 sequence optimization. Usable both as a set of command-line tools and as an
 importable Python library.
 
+`version 0.1.0`
+
 ---
 
 ## Installation
 
 ```bash
-pip install git+https://github.com/VachaLab/modular_evomd.git@evolib
+pip install git+https://github.com/VachaLab/modular_evomd.git@v0.1.0
 ```
 
 This installs the `evomd` library and three console commands: `evo-md`,
